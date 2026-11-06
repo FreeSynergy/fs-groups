@@ -15,11 +15,11 @@ impl GroupRepo {
     /// `group.create`: a new group with no parent. The name must not be blank.
     pub async fn create(&self, name: &str, kind: &str) -> Result<Group> {
         if name.trim().is_empty() {
-            return Err(Error::Conflict("a group needs a name".into()));
+            return Err(Error::Invalid("a group needs a name".into()));
         }
         let g = self.new_group(name.trim(), kind.trim());
-        self.writer().await.put(self.group_object(&g, None)).await?;
-        Ok(g)
+        self.writer().await.put(Self::group_object(&g)).await?;
+        self.require(g.id).await
     }
 
     /// `group.read`: one group, if it exists.
@@ -30,7 +30,7 @@ impl GroupRepo {
         if o.envelope.object_type != GROUP_TYPE || o.envelope.context.as_deref() != Some(CONTEXT) {
             return Ok(None);
         }
-        Ok(Group::from_content(id, &o.content))
+        Ok(Group::from_content(o.envelope, &o.content))
     }
 
     pub(super) async fn require(&self, id: ObjectId) -> Result<Group> {
@@ -42,13 +42,12 @@ impl GroupRepo {
     /// `group.update`: change the name.
     pub async fn rename(&self, id: ObjectId, name: &str) -> Result<Group> {
         if name.trim().is_empty() {
-            return Err(Error::Conflict("a group needs a name".into()));
+            return Err(Error::Invalid("a group needs a name".into()));
         }
         let w = self.writer().await;
         let mut g = w.require(id).await?;
         g.name = name.trim().into();
-        w.save(&g).await?;
-        Ok(g)
+        w.save(&g).await
     }
 
     /// `group.update`: change the kind.
@@ -56,8 +55,7 @@ impl GroupRepo {
         let w = self.writer().await;
         let mut g = w.require(id).await?;
         g.kind = kind.trim().into();
-        w.save(&g).await?;
-        Ok(g)
+        w.save(&g).await
     }
 
     /// `group.update`: set whether and where the group passes its rights on.
@@ -65,8 +63,7 @@ impl GroupRepo {
         let w = self.writer().await;
         let mut g = w.require(id).await?;
         g.right_flow = flow;
-        w.save(&g).await?;
-        Ok(g)
+        w.save(&g).await
     }
 
     /// `group.read`: all groups in name order, whole (no paging).
@@ -83,7 +80,7 @@ impl GroupRepo {
         let found = self.reads.query(&q).await?;
         let (mut groups, mut unreadable) = (vec![], vec![]);
         for o in &found {
-            match Group::from_content(o.envelope.id, &o.content) {
+            match Group::from_content(o.envelope.clone(), &o.content) {
                 Some(g) => groups.push(g),
                 None => unreadable.push(o.envelope.id),
             }
@@ -105,7 +102,7 @@ impl GroupRepo {
         let items = found
             .iter()
             .take(self.page_size)
-            .filter_map(|o| Group::from_content(o.envelope.id, &o.content))
+            .filter_map(|o| Group::from_content(o.envelope.clone(), &o.content))
             .collect();
         Ok(Page {
             items,
@@ -148,9 +145,9 @@ impl GroupRepo {
 }
 
 impl Writer<'_> {
-    /// Write an existing group back, keeping its envelope.
-    pub(super) async fn save(&self, g: &Group) -> Result<()> {
-        let existing = self.load(g.id).await?.map(|o| o.envelope);
-        self.put(self.group_object(g, existing)).await
+    /// Write an existing group back, keeping its envelope; answers it as stored.
+    pub(super) async fn save(&self, g: &Group) -> Result<Group> {
+        self.put(GroupRepo::group_object(g)).await?;
+        self.require(g.id).await
     }
 }

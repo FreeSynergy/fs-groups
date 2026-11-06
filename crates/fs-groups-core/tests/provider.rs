@@ -116,11 +116,10 @@ async fn the_store_backed_provider_reports_what_it_can_and_what_not() {
         "invite.read",
         "right.grant",
         "right.read",
+        "group.subscribe",
     ] {
         assert!(caps.is_supported(id), "{id}");
     }
-    let no = caps.why_not("group.subscribe").unwrap();
-    assert_eq!(no.reason(), "not built yet; it is possible");
 }
 
 #[tokio::test]

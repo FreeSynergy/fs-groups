@@ -3,7 +3,7 @@
 //! Pattern: Adapter — maps the typed values onto AS2 envelopes plus index fields that `fs-store`
 //! understands (ADR 0020). The envelope `name` is derived, never typed separately (ADR 0032).
 
-use fs_store::{Envelope, ObjectId, StoredObject};
+use fs_store::{Envelope, StoredObject};
 use serde_json::{Value, json};
 
 use super::consts::{AS2_TYPE, CONTEXT, GROUP_TYPE};
@@ -35,14 +35,9 @@ impl GroupRepo {
         e
     }
 
-    /// The stored object of a group; `existing` keeps the envelope (id, published) of an update.
-    pub(super) fn group_object(&self, g: &Group, existing: Option<Envelope>) -> StoredObject {
-        let mut env = existing.unwrap_or_else(|| {
-            let mut e = self.fresh_envelope(GROUP_TYPE, &g.name);
-            e.id = g.id;
-            e.iri = Some(g.iri.clone());
-            e
-        });
+    /// The stored object of a group, keeping its envelope (id, published); the name is derived.
+    pub(super) fn group_object(g: &Group) -> StoredObject {
+        let mut env = g.envelope.clone();
         env.name.clone_from(&g.name);
         let mut o = with_nonempty(StoredObject::new(env, AS2_TYPE, g.as2()), "kind", &g.kind);
         for p in &g.parents {
@@ -51,9 +46,10 @@ impl GroupRepo {
         o
     }
 
-    /// A new group value with a fresh id.
+    /// A new group value with a fresh id and envelope.
     pub(super) fn new_group(&self, name: &str, kind: &str) -> Group {
-        let id = ObjectId::new();
+        let envelope = self.fresh_envelope(GROUP_TYPE, name);
+        let id = envelope.id;
         Group {
             id,
             iri: self.iri(id),
@@ -61,6 +57,7 @@ impl GroupRepo {
             kind: kind.into(),
             parents: vec![],
             right_flow: crate::model::RightFlow::default(),
+            envelope,
         }
     }
 }

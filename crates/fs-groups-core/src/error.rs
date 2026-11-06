@@ -47,7 +47,10 @@ pub enum Error {
         /// Parent chain from `parent` up to `group` (just `group` for a self-parent).
         path: Vec<ObjectId>,
     },
-    /// The operation conflicts with the current data (duplicate, wrong kind of member, ...).
+    /// The request itself is not acceptable (blank name or IRI, a group as a member).
+    #[error("{0}")]
+    Invalid(String),
+    /// The operation conflicts with the current data (a duplicate).
     #[error("{0}")]
     Conflict(String),
     /// The invitation is not in a state that allows this step.

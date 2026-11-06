@@ -15,6 +15,7 @@ mod items;
 mod members;
 mod mirror;
 mod nesting;
+mod notify;
 mod parent_requests;
 mod provide;
 mod support;

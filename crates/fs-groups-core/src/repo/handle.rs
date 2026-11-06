@@ -23,7 +23,9 @@ use fs_store::{ObjectId, Store, StoredObject};
 use tokio::sync::{Mutex, MutexGuard};
 
 use super::backend::StoreAdapter;
+use super::notify::Notifying;
 use crate::error::Result;
+use crate::traits::Registry;
 
 /// Groups over an object store. Cheap to clone; clones share one write lock.
 ///
@@ -38,6 +40,8 @@ pub struct GroupRepo {
     pub(super) actor: String,
     pub(super) instance: String,
     pub(super) page_size: usize,
+    /// Tells subscribers about every write; `objects` is decorated with it. Shared by clones only.
+    pub(super) feed: Arc<Registry>,
     lock: Arc<Mutex<()>>,
 }
 
@@ -83,8 +87,14 @@ impl GroupRepo {
         actor: String,
         key: usize,
     ) -> Self {
+        let feed = Arc::<Registry>::default();
+        let objects = Arc::new(Notifying {
+            inner: objects,
+            feed: feed.clone(),
+        });
         Self {
             objects,
+            feed,
             reads,
             actor,
             instance: "local.invalid".into(),

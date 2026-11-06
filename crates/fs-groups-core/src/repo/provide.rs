@@ -3,6 +3,8 @@
 //! Pattern: Adapter — each trait method calls the inherent method of the same concern (inherent
 //! methods win in paths like `GroupRepo::get`), so callers with and without the trait agree.
 
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use fs_interfaces::Capabilities;
 use fs_store::{ObjectId, Timestamp};
@@ -13,7 +15,9 @@ use crate::model::{
     Cursor, Delegation, EffectiveMember, Group, Invitation, Member, Membership, Page,
     ParentRequest, Right, RightFlow,
 };
-use crate::traits::{Delegations, Groups, Invitations, Memberships};
+use crate::traits::{
+    Delegations, GroupFeed, GroupListener, Groups, Invitations, Memberships, Subscription,
+};
 
 #[async_trait]
 impl Groups for GroupRepo {
@@ -142,5 +146,11 @@ impl Delegations for GroupRepo {
     }
     async fn may_do(&self, group: ObjectId, person: &str, right: Right) -> Result<bool> {
         GroupRepo::may_do(self, group, person, right).await
+    }
+}
+
+impl GroupFeed for GroupRepo {
+    fn subscribe(&self, listener: Arc<dyn GroupListener>) -> Subscription {
+        self.feed.add(listener)
     }
 }

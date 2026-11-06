@@ -29,11 +29,11 @@ impl GroupRepo {
     pub async fn remove_parent(&self, id: ObjectId, parent: ObjectId) -> Result<Group> {
         let w = self.writer().await;
         let mut g = w.require(id).await?;
-        if g.parents.contains(&parent) {
-            g.parents.retain(|p| *p != parent);
-            w.save(&g).await?;
+        if !g.parents.contains(&parent) {
+            return Ok(g);
         }
-        Ok(g)
+        g.parents.retain(|p| *p != parent);
+        w.save(&g).await
     }
 
     /// `group.read`: direct parents (only groups that exist).

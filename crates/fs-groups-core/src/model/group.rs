@@ -3,7 +3,7 @@
 //! Pattern: Value object + Adapter — `as2` / `from_content` map between the typed value and the
 //! AS2 JSON that is the authoritative content (kind and parents are the `fs:` extension members).
 
-use fs_store::ObjectId;
+use fs_store::{Envelope, ObjectId};
 use serde_json::{Value, json};
 
 use super::RightFlow;
@@ -12,7 +12,7 @@ use super::RightFlow;
 pub const NS: &str = "https://freesynergy.net/ns#";
 
 /// A group: an AS2 `Group` with a free-text kind and any number of parents.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Group {
     /// Id (UUIDv7); the key for everything else.
     pub id: ObjectId,
@@ -26,6 +26,8 @@ pub struct Group {
     pub parents: Vec<ObjectId>,
     /// Whether and where this group passes its rights on; `None` when unset.
     pub right_flow: RightFlow,
+    /// Its AS2 envelope, as stored (`Group.envelope` in `groups.capnp`).
+    pub envelope: Envelope,
 }
 
 impl Group {
@@ -43,7 +45,7 @@ impl Group {
     }
 
     /// Read a group back from its AS2 content. `None` if it is not a well-formed group.
-    pub fn from_content(id: ObjectId, content: &Value) -> Option<Group> {
+    pub fn from_content(envelope: Envelope, content: &Value) -> Option<Group> {
         let text = |k: &str| content.get(k)?.as_str().map(str::to_string);
         let parents = content
             .get("fs:parents")?
@@ -52,7 +54,7 @@ impl Group {
             .filter_map(|v| v.as_str()?.parse().ok())
             .collect();
         Some(Group {
-            id,
+            id: envelope.id,
             iri: text("id")?,
             name: text("name")?,
             // A group without a kind is still a group (the kind is free text and may be empty).
@@ -62,6 +64,7 @@ impl Group {
             right_flow: text("fs:rightFlow")
                 .and_then(|s| RightFlow::parse(&s))
                 .unwrap_or_default(),
+            envelope,
         })
     }
 }

@@ -26,7 +26,7 @@ impl GroupRepo {
         expires: Option<Timestamp>,
     ) -> Result<Invitation> {
         if invitee.trim().is_empty() {
-            return Err(Error::Conflict("an invitation needs an invitee".into()));
+            return Err(Error::Invalid("an invitation needs an invitee".into()));
         }
         let (invitee, role) = (invitee.trim(), role.trim());
         let w = self.writer().await;
@@ -102,7 +102,7 @@ impl GroupRepo {
     ) -> Result<Membership> {
         let person = person.trim();
         if person.is_empty() {
-            return Err(Error::Conflict("an accepting person needs an IRI".into()));
+            return Err(Error::Invalid("an accepting person needs an IRI".into()));
         }
         let w = self.writer().await;
         let (o, inv) = w.invitation(id).await?;

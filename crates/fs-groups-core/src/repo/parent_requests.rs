@@ -76,7 +76,7 @@ impl GroupRepo {
         w.refuse_cycle(r.child, r.parent).await?;
         if !child.parents.contains(&r.parent) {
             child.parents.push(r.parent);
-            w.save(&child).await?;
+            child = w.save(&child).await?;
         }
         w.set_request_state(o, RequestState::Approved).await?;
         Ok(child)
