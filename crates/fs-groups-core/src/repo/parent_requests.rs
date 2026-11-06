@@ -168,8 +168,11 @@ impl Writer<'_> {
             .load(parent)
             .await?
             .is_some_and(|o| o.envelope.attributed_to.as_deref() == Some(self.actor.as_str()));
-        if (no_delegation && created_by_actor)
-            || self.may_do(parent, &self.actor, Right::Manage).await?
+        // an agent never answers for a group (ADR 0056), as creator or otherwise
+        let human = self.is_known_human(&self.actor).await?;
+        if human
+            && ((no_delegation && created_by_actor)
+                || self.may_do(parent, &self.actor, Right::Manage).await?)
         {
             Ok(())
         } else {

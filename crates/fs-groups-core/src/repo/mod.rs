@@ -3,6 +3,7 @@
 //! Pattern: Facade (declarations) — `GroupRepo` is the one entry point; each file is one concept
 //! (items, nesting, memberships, effective membership, invitations, delegations, mirror ledger).
 
+mod admins;
 mod backend;
 mod codec;
 mod consts;

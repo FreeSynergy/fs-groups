@@ -40,5 +40,7 @@ pub use repo::{
     CONTEXT, DELEGATION_TYPE, GROUP_TYPE, GroupRepo, INVITATION_TYPE, MEMBERSHIP_TYPE,
     PARENT_REQUEST_TYPE,
 };
-pub use traits::{Delegations, DirectoryGroup, GroupDirectory, Groups, Invitations, Memberships};
+pub use traits::{
+    AiMarking, Delegations, DirectoryGroup, GroupDirectory, Groups, Invitations, Memberships,
+};
 pub use unsupported::not_possible;

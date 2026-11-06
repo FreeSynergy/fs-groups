@@ -83,6 +83,10 @@ impl Writer<'_> {
         role: &str,
     ) -> Result<Membership> {
         let g = self.require(group).await?;
+        if let (true, Member::Person(person)) = (self.is_admin_role(role), &member) {
+            self.require_human(person, &format!("role {role:?} in {}", g.name))
+                .await?;
+        }
         if let Some(same) = self
             .direct(group)
             .await?

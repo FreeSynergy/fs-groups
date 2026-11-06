@@ -61,7 +61,9 @@ async fn provisional_only_the_parents_side_may_answer() {
         r.create("c", "t").await.unwrap(),
         r.create("p", "t").await.unwrap(),
     );
-    let stranger = GroupRepo::new(store.clone(), OTHER).with_instance("example.org");
+    let stranger = GroupRepo::new(store.clone(), OTHER)
+        .with_instance("example.org")
+        .with_ai_marking(common::Agents::with(&[]));
     let req = stranger.request_parent(c.id, p.id).await.unwrap();
     assert_eq!(req.requester, OTHER, "anybody may ask");
     // no delegation on p yet: only its creator may answer
@@ -124,7 +126,9 @@ async fn the_mirror_sees_approved_links_only() {
         r.create("q", "t").await.unwrap(),
     );
     for g in [&c, &p] {
-        r.set_right_flow(g.id, fs_groups_core::RightFlow::Up).await.unwrap();
+        r.set_right_flow(g.id, fs_groups_core::RightFlow::Up)
+            .await
+            .unwrap();
     }
     common::link(&r, c.id, p.id).await;
     r.request_parent(c.id, q.id).await.unwrap();

@@ -14,7 +14,7 @@
 //! handle shares it. It does not cover a second process, nor a second handle opened on the same
 //! database file; the store has no compare-and-swap to build on. Run one writer per database.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::ops::Deref;
 use std::sync::{Arc, Mutex as StdMutex, OnceLock, PoisonError, Weak};
 
@@ -24,6 +24,7 @@ use tokio::sync::{Mutex, MutexGuard};
 
 use super::backend::StoreAdapter;
 use crate::error::Result;
+use crate::traits::AiMarking;
 
 /// Groups over an object store. Cheap to clone; clones share one write lock.
 ///
@@ -38,6 +39,12 @@ pub struct GroupRepo {
     pub(super) actor: String,
     pub(super) instance: String,
     pub(super) page_size: usize,
+    /// The host's answer to "is this member an agent" (ADR 0056); none wired = no answer.
+    pub(super) ai: Option<Arc<dyn AiMarking>>,
+    /// Role ids that count as admin besides `Right::Manage` (configuration).
+    pub(super) admin_roles: BTreeSet<String>,
+    /// The identity of whoever installed: the top admin (configuration, provisional).
+    pub(super) installer: Option<String>,
     lock: Arc<Mutex<()>>,
 }
 
@@ -89,6 +96,9 @@ impl GroupRepo {
             actor,
             instance: "local.invalid".into(),
             page_size: 100,
+            ai: None,
+            admin_roles: BTreeSet::new(),
+            installer: None,
             lock: lock_for(key),
         }
     }
@@ -105,6 +115,39 @@ impl GroupRepo {
     pub fn with_page_size(mut self, n: usize) -> Self {
         self.page_size = n.max(1);
         self
+    }
+
+    /// Wire the host's answer to "is this member an agent". **Without it every admin grant is
+    /// refused** (the safe reading of "no answer"), see [`AiMarking`].
+    #[must_use]
+    pub fn with_ai_marking(mut self, ai: Arc<dyn AiMarking>) -> Self {
+        self.ai = Some(ai);
+        self
+    }
+
+    /// Role ids that count as admin besides `Right::Manage`; an agent cannot hold them.
+    #[must_use]
+    pub fn with_admin_roles<I, S>(mut self, roles: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.admin_roles = roles.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// The identity of whoever installed: the top admin, who may do everything on every group (unless
+    /// marked as an agent). **Provisional, and not authentication:** this crate only compares the
+    /// string it is asked about.
+    #[must_use]
+    pub fn with_installer(mut self, installer: impl Into<String>) -> Self {
+        self.installer = Some(installer.into());
+        self
+    }
+
+    /// The configured top admin, if any.
+    pub fn installer(&self) -> Option<&str> {
+        self.installer.as_deref()
     }
 
     pub(super) fn iri(&self, id: ObjectId) -> String {

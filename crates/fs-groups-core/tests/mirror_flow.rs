@@ -29,7 +29,10 @@ async fn provisional_every_nested_edge_is_reported_and_still_applied() {
     let report = r.sync_to(&dir).await.unwrap();
     assert_eq!(report.divergences, want, "whatever the children set");
     // none of them passes on as Kanidm does, so the directory gets the flat form
-    assert!(dir.get(dept.id).unwrap().nested.is_empty(), "flat, not nested");
+    assert!(
+        dir.get(dept.id).unwrap().nested.is_empty(),
+        "flat, not nested"
+    );
     // reported again on every run, since the cause is still there; nothing more is written
     let writes = dir.writes();
     let second = r.sync_to(&dir).await.unwrap();

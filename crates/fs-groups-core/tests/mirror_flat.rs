@@ -58,7 +58,12 @@ async fn check_all(r: &GroupRepo, dir: &FakeDirectory, groups: &[&Group]) {
             .into_iter()
             .map(|m| m.person)
             .collect();
-        assert_eq!(closure(dir, g.id), effective, "{} loses or gains someone", g.name);
+        assert_eq!(
+            closure(dir, g.id),
+            effective,
+            "{} loses or gains someone",
+            g.name
+        );
         let mut flat_extras = BTreeSet::new();
         for h in nested_groups(dir, g.id) {
             let direct: BTreeSet<_> = r
@@ -72,7 +77,9 @@ async fn check_all(r: &GroupRepo, dir: &FakeDirectory, groups: &[&Group]) {
         }
         // a right held by this group, placed on a group of its own
         let target = r.create("target", "t").await.unwrap();
-        r.grant(target.id, Member::Group(g.id), Right::Read).await.unwrap();
+        r.grant(target.id, Member::Group(g.id), Right::Read)
+            .await
+            .unwrap();
         for who in closure(dir, g.id).difference(&listed(dir, g.id)) {
             assert!(
                 r.may_do(target.id, who, Right::Read).await.unwrap() || flat_extras.contains(who),
@@ -153,7 +160,12 @@ async fn a_diamond_is_nested_on_one_side_and_flat_on_the_other() {
     for (g, who) in [(&top, "t"), (&left, "l"), (&right, "r"), (&bottom, "b")] {
         put(&r, g, who).await;
     }
-    for (c, p) in [(&left, &top), (&right, &top), (&bottom, &left), (&bottom, &right)] {
+    for (c, p) in [
+        (&left, &top),
+        (&right, &top),
+        (&bottom, &left),
+        (&bottom, &right),
+    ] {
         link(&r, c.id, p.id).await;
     }
     let dir = FakeDirectory::default();
@@ -168,7 +180,10 @@ async fn a_diamond_is_nested_on_one_side_and_flat_on_the_other() {
 #[tokio::test]
 async fn a_change_of_setting_heals_the_directory_both_ways() {
     let r = repo().await;
-    let (p, c) = (mk(&r, "p", RightFlow::Up).await, mk(&r, "c", RightFlow::Up).await);
+    let (p, c) = (
+        mk(&r, "p", RightFlow::Up).await,
+        mk(&r, "c", RightFlow::Up).await,
+    );
     put(&r, &p, "p").await;
     put(&r, &c, "c").await;
     link(&r, c.id, p.id).await;
@@ -191,7 +206,10 @@ async fn a_change_of_setting_heals_the_directory_both_ways() {
 #[tokio::test]
 async fn the_old_nested_form_is_healed() {
     let r = repo().await;
-    let (p, c) = (mk(&r, "p", RightFlow::None).await, mk(&r, "c", RightFlow::None).await);
+    let (p, c) = (
+        mk(&r, "p", RightFlow::None).await,
+        mk(&r, "c", RightFlow::None).await,
+    );
     put(&r, &c, "c").await;
     link(&r, c.id, p.id).await;
     // what an earlier version wrote: always nested, never flat
@@ -202,8 +220,14 @@ async fn the_old_nested_form_is_healed() {
         members: members.iter().map(|m| person(m)).collect(),
         nested: nested.to_vec(),
     };
-    dir.groups.lock().unwrap().insert(c.id, old(&c, &["c"], &[]));
-    dir.groups.lock().unwrap().insert(p.id, old(&p, &[], &[c.id]));
+    dir.groups
+        .lock()
+        .unwrap()
+        .insert(c.id, old(&c, &["c"], &[]));
+    dir.groups
+        .lock()
+        .unwrap()
+        .insert(p.id, old(&p, &[], &[c.id]));
     r.sync_to(&dir).await.unwrap();
     assert!(dir.get(p.id).unwrap().nested.is_empty());
     assert_eq!(listed(&dir, p.id), [person("c")].into());
@@ -212,7 +236,10 @@ async fn the_old_nested_form_is_healed() {
 #[tokio::test]
 async fn an_edge_that_is_removed_leaves_the_flat_list() {
     let r = repo().await;
-    let (p, c) = (mk(&r, "p", RightFlow::None).await, mk(&r, "c", RightFlow::None).await);
+    let (p, c) = (
+        mk(&r, "p", RightFlow::None).await,
+        mk(&r, "c", RightFlow::None).await,
+    );
     put(&r, &c, "c").await;
     link(&r, c.id, p.id).await;
     let dir = FakeDirectory::default();
@@ -228,7 +255,10 @@ async fn an_edge_that_is_removed_leaves_the_flat_list() {
 async fn a_person_in_two_children_is_listed_once_and_a_second_run_writes_nothing() {
     let r = repo().await;
     let p = mk(&r, "p", RightFlow::None).await;
-    let (c1, c2) = (mk(&r, "c1", RightFlow::None).await, mk(&r, "c2", RightFlow::None).await);
+    let (c1, c2) = (
+        mk(&r, "c1", RightFlow::None).await,
+        mk(&r, "c2", RightFlow::None).await,
+    );
     for c in [&c1, &c2] {
         put(&r, c, "both").await;
         link(&r, c.id, p.id).await;
@@ -246,13 +276,19 @@ async fn a_person_in_two_children_is_listed_once_and_a_second_run_writes_nothing
 async fn what_remains_in_the_divergence_list_is_the_flat_edges() {
     let r = repo().await;
     let p = mk(&r, "p", RightFlow::Up).await;
-    let (nested, flat) = (mk(&r, "nested", RightFlow::Up).await, mk(&r, "flat", RightFlow::None).await);
+    let (nested, flat) = (
+        mk(&r, "nested", RightFlow::Up).await,
+        mk(&r, "flat", RightFlow::None).await,
+    );
     link(&r, nested.id, p.id).await;
     link(&r, flat.id, p.id).await;
     let report = r.sync_to(&FakeDirectory::default()).await.unwrap();
     // a flat edge gives the child's people the parent's rights in the directory, which may_do does not
     assert_eq!(
         report.divergences,
-        vec![Divergence { group: flat.id, parent: p.id }]
+        vec![Divergence {
+            group: flat.id,
+            parent: p.id
+        }]
     );
 }

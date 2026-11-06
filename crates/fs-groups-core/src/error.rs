@@ -61,6 +61,12 @@ pub enum Error {
     /// The person who tried to answer is not the one invited.
     #[error("invitation {0} was not sent to this person")]
     NotInvitee(ObjectId),
+    /// An agent (a member marked as AI) cannot be admin, ADR 0056: not `manage`, not an admin role.
+    #[error("an agent cannot be admin: {0}")]
+    AgentNotAdmin(String),
+    /// Whether the member is an agent could not be answered, so the admin right is refused.
+    #[error("not granted: it is not known whether {0} is an agent")]
+    AiStatusUnknown(String),
     /// The acting person may not do this (see the notes on what is and is not enforced in `DESIGN.md`).
     #[error("forbidden: {0}")]
     Forbidden(String),

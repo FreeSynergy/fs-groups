@@ -84,14 +84,24 @@ async fn provisional_members_of_an_up_child_under_an_up_holder_receive_its_right
     let grandchild = mk(&r, "grandchild", RightFlow::Up).await;
     common::link(&r, child.id, holder.id).await;
     common::link(&r, grandchild.id, child.id).await;
-    r.add(grandchild.id, Member::Person(person("ada")), "").await.unwrap();
-    r.grant(target.id, Member::Group(holder.id), Right::Read).await.unwrap();
-    assert!(may(&r, &target, "ada").await, "up along a chain of groups that all pass up");
+    r.add(grandchild.id, Member::Person(person("ada")), "")
+        .await
+        .unwrap();
+    r.grant(target.id, Member::Group(holder.id), Right::Read)
+        .await
+        .unwrap();
+    assert!(
+        may(&r, &target, "ada").await,
+        "up along a chain of groups that all pass up"
+    );
     r.set_right_flow(child.id, RightFlow::None).await.unwrap();
     assert!(!may(&r, &target, "ada").await, "the chain is broken");
     r.set_right_flow(child.id, RightFlow::Up).await.unwrap();
     r.set_right_flow(holder.id, RightFlow::Down).await.unwrap();
-    assert!(!may(&r, &target, "ada").await, "the holder does not pass up");
+    assert!(
+        !may(&r, &target, "ada").await,
+        "the holder does not pass up"
+    );
 }
 
 // ---- in doubt, no ----
@@ -289,7 +299,10 @@ fn a_nested_edge_is_expressible_exactly_when_the_child_is_a_recipient_of_the_par
         let ids: Vec<_> = (0..n).map(|_| ObjectId::new()).collect();
         let groups: Vec<_> = (0..n)
             .map(|i| {
-                let parents = (0..i).filter(|_| rng.next(3) == 0).map(|j| ids[j]).collect();
+                let parents = (0..i)
+                    .filter(|_| rng.next(3) == 0)
+                    .map(|j| ids[j])
+                    .collect();
                 group(ids[i], flows[rng.next(3)], parents)
             })
             .collect();
@@ -297,8 +310,8 @@ fn a_nested_edge_is_expressible_exactly_when_the_child_is_a_recipient_of_the_par
         let settings: BTreeMap<_, _> = groups.iter().map(|g| (g.id, g.right_flow)).collect();
         for g in &groups {
             for p in &g.parents {
-                let receives = fs_groups_core::right_flow::recipients(&graph, &settings, *p)
-                    .contains(&g.id);
+                let receives =
+                    fs_groups_core::right_flow::recipients(&graph, &settings, *p).contains(&g.id);
                 assert_eq!(
                     fs_groups_core::right_flow::directory_expresses(&settings, g.id, *p),
                     receives

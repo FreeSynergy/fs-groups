@@ -32,8 +32,15 @@ impl GroupRepo {
         };
         let w = self.writer().await;
         let g = w.require(group).await?;
-        if let Member::Group(h) = &holder {
-            w.require(*h).await?;
+        match &holder {
+            Member::Group(h) => {
+                w.require(*h).await?;
+            }
+            // A group may hold manage; an agent in it is left out when asked (see `may_do`).
+            Member::Person(p) if right == Right::Manage => {
+                w.require_human(p, &format!("manage on {}", g.name)).await?;
+            }
+            Member::Person(_) => {}
         }
         if let Some(same) = w
             .delegations(group)
@@ -120,6 +127,9 @@ impl GroupRepo {
         if person.is_empty() || cyclic.contains(&group) {
             return Ok(false);
         }
+        if self.installer.as_deref() == Some(person) && self.is_known_human(person).await? {
+            return Ok(true);
+        }
         let flows = right_flow::settings(&groups);
         let sources: BTreeSet<_> = right_flow::sources(&graph, &flows, group)
             .into_iter()
@@ -157,7 +167,8 @@ impl GroupRepo {
                                 .any(|g| !cyclic.contains(g) && mine.contains(g))
                     }
                 };
-                if held {
+                // ADR 0056: an agent never counts as admin, whichever way manage reaches them
+                if held && (d.right != Right::Manage || self.is_known_human(person).await?) {
                     return Ok(true);
                 }
             }

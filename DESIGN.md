@@ -21,7 +21,8 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 | Delegation: `grant` (idempotent), `revoke`, `list`, `may_do` (safe reading of the right flow, in doubt no; `manage` implies all) | done; **only answers the question, nothing else enforces it yet** |
 | Mirroring: `Mirror::sync_to(&dyn GroupDirectory)` (Template method), idempotent, heals manual changes, removes only ids it mirrored (ledger in the store) | done, tested against an in-memory fake directory |
 | Right flow (ADR 0055 point 6): `Group.right_flow` (`None` default, `Down`, `Up`), `set_right_flow`, `fs:rightFlow` in the AS2 content (absent = `None`); **meaning provisional** | done |
-| Mirror report lists `divergences`: nested edges where the directory gives more than `may_do` (with the safe reading: every edge); reported, not adapted | done |
+| Mirror option B (ADR 0056): nested only where child and parent both pass `Up`, else a flat list (the child's whole subtree); old nested form healed; `divergences` = the flat edges | done, **provisional** |
+| Agents never admin: `AiMarking` (injected), admin roles by configuration, installer by configuration; no answer = refuse | done, **provisional, no authentication** |
 | Mirror hardening: ledger written before the directory (intent) and tidied after; keyed by `directory_id`; unreadable groups never removed; a parent applied only with children the directory holds; one unmapped person does not block the group | done |
 | One write path (`Writer` holds the lock), process-wide lock per store handle | done; **single-writer limit, see Decisions** |
 | `group.subscribe`, capnp-rpc server | **not built**; `capabilities()` says "not built yet; it is possible" |
@@ -32,6 +33,7 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 | Module | Pattern | Why |
 |---|---|---|
 | `traits/groups.rs` etc. | Repository (interface) + Template method + Null Object | callers use `dyn Groups`; defaults answer `Unsupported`; `ancestors`/`descendants` are provided in terms of `parents`/`children` |
+| `traits/ai.rs`, `repo/admins.rs` | Strategy (injected) + Specification | the host says whether a member is an agent; one place says what counts as admin |
 | `traits/directory.rs` | Strategy + Adapter (interface) | the provider interface for mirrors |
 | `model/*` | Value objects | plain data, one concept per file |
 | `invitation_state.rs` | State | one transition function for the whole life cycle |
@@ -66,10 +68,12 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
   *Effect:* `None` (default): the group only. `Down` / `Up`: also the children / parents, and onward, **but only groups that
   pass the same way**. Both ends of a link must agree, so a child that sets `Up` cannot pull a right from a parent that set
   `None` (or `Down`), and a parent cannot push one onto a child that set `None`. (A looser reading, "the target is not
-  `None`", is a one-line change in `reach` and `sources`.) *Recipients:* a holder group's right reaches its **direct**
-  members only, whatever anybody set; so a board that passes down does not reach an intern in a child, and a new parent of
-  a holder does not capture its rights. A separate, explicit setting on the holder could widen that later; it would change
-  `recipients` only. Membership (`effective`, `groups_of`, `is_member`) is about belonging and does not use the setting.
+  `None`", is a one-line change in `reach` and `sources`.) *Recipients:* a holder that does not pass `Up` reaches its **direct** members only, whatever anybody set; so a board that
+  passes down does not reach an intern in a child, and a new parent of a holder does not capture its rights. A holder that
+  passes `Up` is joined by the children that pass `Up` too, and onward through such children (both ends must agree): their
+  members rise into the holder, which is what a directory like Kanidm does. This is the one place where the setting widens the
+  recipients; splitting it into two settings with consent on both sides is **still open with the owner** (ADR 0056), the safe
+  reading stays. Membership (`effective`, `groups_of`, `is_member`) is about belonging and does not use the setting.
   `Manage` implies the other rights.
 * **`may_do` in doubt says no.** Unknown group: `NotFound`. A group on a loop (or between loops), a holder group that is gone,
   a delegation or membership that cannot be read, an unknown right, an unknown setting (read as `none`): never a yes. A
@@ -94,10 +98,29 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
   compare-and-swap, so such writers can still store a cycle or lose an update. Keep to one writer per database. Walks stay safe
   on cyclic data.
 * **Delegation**: see right flow for who is reached. `Delegation` has the store type `Delegation` (AS2 has none).
-* **Mirror and right flow**: in Kanidm a member of a child is always `memberof` the parent, per group not switchable, so it
-  gets what the parent holds. `directory_expresses` is true when `may_do` gives the same (the child is among the parent's
-  `recipients`); with the safe reading it never is, so `SyncReport::divergences` names **every** nested edge. The effect clause
-  has no counterpart in a directory and is not compared. The mirror does not adapt. Directory behaviour is unchanged.
+* **Mirror, option B (ADR 0056, provisional).** In Kanidm rights always go from the child upward (a member of a child gets what
+  the parent holds); that holds only there and cannot be set per group. A nested edge `child` in `parent` therefore goes to the
+  directory only where fs-groups says the same: `right_flow::directory_expresses`, true when the child is among the parent's
+  `recipients`, for a direct edge: both pass `Up`. Every other child is not nested; the parent's **flat list** holds its own
+  direct people plus the people of the child's whole subtree (also what is nested below that child in fs-groups). So the
+  directory's closure of a group equals `effective`: nobody who belongs loses anything, and a person may be listed in a group
+  directly because of a child. A change of setting or an edge removed is healed by the normal sync (the old nested form differs
+  from the wanted one and is updated). **What remains in `SyncReport::divergences`:** the flat edges. There the child's people are
+  members of the parent in the directory and get what the parent holds, which `may_do` does not give them; and since a flat
+  list is listed in the parent, the same extra reach goes on up through nested edges above it. Nested edges are faithful by
+  construction (tested: nobody reaches a group through nesting without `may_do` or a flat list on the way). The effect clause has
+  no counterpart in a directory and is not compared. The mirror does not adapt otherwise.
+* **Agents are never admin (ADR 0056, provisional).** This crate does not depend on fs-people: the host injects `AiMarking`
+  (`with_ai_marking`, wired to `RoleBook::is_ai`). Admin is `Right::Manage` plus the role ids of `with_admin_roles`. `grant` of
+  `Manage` to a person and `add` (also through `accept`) of an admin role are refused for an agent (`AgentNotAdmin`) and **when
+  there is no answer or no checker** (`AiStatusUnknown`); a failing checker is an error. Through a holder group: a group
+  containing an agent **may** hold `Manage`, but `may_do` never counts a `Manage` delegation for a person who is an agent or not
+  known to be a human (so the agent keeps what is below manage, and also loses `Manage` if marked later). An agent also cannot
+  answer a parent request. This is only an answer: **nothing verifies who calls**, and a caller that wires no checker or a
+  checker that always says human defeats it.
+* **The top admin is whoever installs (provisional).** `with_installer(identity)` is configuration only: `may_do` is true for that
+  identity on every group, if they are known not to be an agent. They appoint further admins by `grant`ing `Manage` (or an admin
+  role); who may grant is not enforced. No authentication is built.
 * **Mirror**: the ledger (which ids were put into which directory, keyed by `GroupDirectory::directory_id`, default the provider
   name) is a store object of type `MirrorLedger`. The ids are written **before** the directory is touched (a failure later
   loses nothing) and tidied after; an id leaves only when its group was removed or the directory confirms (`read`) it is not
@@ -115,6 +138,7 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 
 ## Open points
 
+* **Two settings and consent on both sides** (open with the owner, ADR 0056): the safe reading stays until he answers.
 * **Enforcement of rights** (`may_do` is not asked by `add`/`remove`/`delete`): needs the acting person on each call; comes with the capnp server.
 * **`group.subscribe`** and the **capnp-rpc server** are not written. The traits return typed values (`Group`, ...), not `StoredObject`.
 * The store's invitation-reply activities (`put_and_log` with `Accept` / `Reject`) are not used yet.

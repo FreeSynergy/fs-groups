@@ -8,13 +8,42 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use async_trait::async_trait;
-use fs_groups_core::{DirectoryGroup, Error, GroupDirectory, GroupRepo, Result};
+use fs_groups_core::{AiMarking, DirectoryGroup, Error, GroupDirectory, GroupRepo, Result};
 use fs_interfaces::Capabilities;
 use fs_store::traits::{ObjectQuery, ObjectRepository};
 use fs_store::{Activity, LogEntry, ObjectId, Query, StoredObject};
 use fs_store::{Store, Timestamp, TursoStore};
 
 pub const ME: &str = "https://local.invalid/users/owner";
+
+/// The host's answer to "is this member an agent": the listed ones are, everybody else is a human.
+#[derive(Default)]
+pub struct Agents(pub Mutex<Vec<String>>);
+
+impl Agents {
+    pub fn with(list: &[&str]) -> Arc<Self> {
+        Arc::new(Self(Mutex::new(
+            list.iter().map(|s| (*s).to_string()).collect(),
+        )))
+    }
+}
+
+#[async_trait]
+impl AiMarking for Agents {
+    async fn is_ai(&self, person: &str) -> Result<Option<bool>> {
+        Ok(Some(self.0.lock().unwrap().iter().any(|a| a == person)))
+    }
+}
+
+/// An answer that is not available.
+pub struct NoAnswer;
+
+#[async_trait]
+impl AiMarking for NoAnswer {
+    async fn is_ai(&self, _person: &str) -> Result<Option<bool>> {
+        Ok(None)
+    }
+}
 
 /// A repository over a fresh in-memory store.
 pub async fn repo() -> GroupRepo {
@@ -25,7 +54,9 @@ pub async fn repo() -> GroupRepo {
 pub async fn setup() -> (GroupRepo, Arc<dyn Store>) {
     let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
     (
-        GroupRepo::new(store.clone(), ME).with_instance("example.org"),
+        GroupRepo::new(store.clone(), ME)
+            .with_instance("example.org")
+            .with_ai_marking(Agents::with(&[])),
         store,
     )
 }
@@ -181,7 +212,9 @@ pub async fn slow_repos(n: usize) -> Vec<GroupRepo> {
     let slow = Arc::new(Slow(store));
     (0..n)
         .map(|_| {
-            GroupRepo::with_backend(slow.clone(), slow.clone(), ME).with_instance("example.org")
+            GroupRepo::with_backend(slow.clone(), slow.clone(), ME)
+                .with_instance("example.org")
+                .with_ai_marking(Agents::with(&[]))
         })
         .collect()
 }
@@ -251,5 +284,7 @@ pub fn faulty_repo(
         fail_put: Box::new(fail_put),
         fail_query: Box::new(fail_query),
     });
-    GroupRepo::with_backend(f.clone(), f, ME).with_instance("example.org")
+    GroupRepo::with_backend(f.clone(), f, ME)
+        .with_instance("example.org")
+        .with_ai_marking(Agents::with(&[]))
 }
