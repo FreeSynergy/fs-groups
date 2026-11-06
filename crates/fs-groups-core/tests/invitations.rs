@@ -14,7 +14,9 @@ async fn accepting_creates_the_membership_with_the_offered_role() {
         .await
         .unwrap();
     assert_eq!(inv.state, InvitationState::Pending);
-    let m = Invitations::accept(&r, inv.id, &person("ada"), at(500))
+    // sent to an e-mail address: the caller says which verified address the person proved
+    let m = r
+        .accept_proved(inv.id, &person("ada"), "Ada@Example.org", at(500))
         .await
         .unwrap();
     assert_eq!((m.group, m.role.as_str()), (g.id, "member"));
@@ -29,7 +31,7 @@ async fn accepting_creates_the_membership_with_the_offered_role() {
 async fn an_answered_invitation_cannot_be_answered_again() {
     let r = repo().await;
     let g = r.create("Club", "club").await.unwrap();
-    let inv = r.invite(g.id, "ada", "", None).await.unwrap();
+    let inv = r.invite(g.id, &person("ada"), "", None).await.unwrap();
     Invitations::decline(&r, inv.id).await.unwrap();
     let err = Invitations::accept(&r, inv.id, &person("ada"), at(1))
         .await
@@ -48,7 +50,7 @@ async fn an_answered_invitation_cannot_be_answered_again() {
 async fn a_revoked_invitation_cannot_be_accepted() {
     let r = repo().await;
     let g = r.create("Club", "club").await.unwrap();
-    let inv = r.invite(g.id, "ada", "", None).await.unwrap();
+    let inv = r.invite(g.id, &person("ada"), "", None).await.unwrap();
     Invitations::revoke(&r, inv.id).await.unwrap();
     assert!(
         Invitations::accept(&r, inv.id, &person("ada"), at(1))
@@ -65,7 +67,10 @@ async fn a_revoked_invitation_cannot_be_accepted() {
 async fn an_expired_invitation_cannot_be_accepted_and_is_stored_as_expired() {
     let r = repo().await;
     let g = r.create("Club", "club").await.unwrap();
-    let inv = r.invite(g.id, "ada", "", Some(at(1000))).await.unwrap();
+    let inv = r
+        .invite(g.id, &person("ada"), "", Some(at(1000)))
+        .await
+        .unwrap();
     // the moment itself counts as passed
     let err = Invitations::accept(&r, inv.id, &person("ada"), at(1000))
         .await
@@ -108,7 +113,10 @@ async fn expire_due_marks_only_the_pending_ones_that_ran_out() {
 async fn accepting_twice_is_refused_and_does_not_double_the_membership() {
     let r = repo().await;
     let g = r.create("Club", "club").await.unwrap();
-    let inv = r.invite(g.id, "ada", "member", None).await.unwrap();
+    let inv = r
+        .invite(g.id, &person("ada"), "member", None)
+        .await
+        .unwrap();
     Invitations::accept(&r, inv.id, &person("ada"), at(1))
         .await
         .unwrap();

@@ -109,6 +109,16 @@ impl Graph {
         out
     }
 
+    /// The groups that lie on a cycle or between cycles. Empty for good data. Used to refuse an
+    /// answer that would rest on a loop. Found by peeling off, in turn, the groups without
+    /// children and the groups without parents; what cannot be peeled is looped.
+    pub fn cyclic_nodes(&self) -> BTreeSet<ObjectId> {
+        let mut alive: BTreeSet<_> = self.parents.keys().copied().collect();
+        peel(&mut alive, |id| self.children(id), |id| self.parents(id));
+        peel(&mut alive, |id| self.parents(id), |id| self.children(id));
+        alive
+    }
+
     fn reach(&self, start: ObjectId, up: bool) -> Vec<(ObjectId, Vec<ObjectId>)> {
         let mut seen = BTreeSet::from([start]);
         let mut queue = VecDeque::from([(start, vec![start])]);
@@ -127,5 +137,33 @@ impl Graph {
             }
         }
         out
+    }
+}
+
+/// Remove from `alive` every group all of whose `out` neighbours are gone, repeatedly.
+fn peel<'a>(
+    alive: &mut BTreeSet<ObjectId>,
+    out: impl Fn(ObjectId) -> &'a [ObjectId],
+    back: impl Fn(ObjectId) -> &'a [ObjectId],
+) {
+    let mut waiting: BTreeMap<_, _> = alive
+        .iter()
+        .map(|id| (*id, out(*id).iter().filter(|n| alive.contains(n)).count()))
+        .collect();
+    let mut ready: VecDeque<_> = waiting
+        .iter()
+        .filter(|(_, n)| **n == 0)
+        .map(|(id, _)| *id)
+        .collect();
+    while let Some(id) = ready.pop_front() {
+        alive.remove(&id);
+        for b in back(id) {
+            if let Some(n) = waiting.get_mut(b) {
+                *n -= 1;
+                if *n == 0 {
+                    ready.push_back(*b);
+                }
+            }
+        }
     }
 }

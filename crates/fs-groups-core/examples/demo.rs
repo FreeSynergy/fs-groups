@@ -15,7 +15,9 @@ async fn main() -> Result<(), Error> {
 
     let dept = repo.create("Energy department", "department").await?;
     let team = repo.create("Solar roofs", "project").await?;
-    repo.add_parent(team.id, dept.id).await?;
+    // Nesting needs the parent's consent: ask, then approve (as the creator of the department).
+    let request = repo.request_parent(team.id, dept.id).await?;
+    repo.approve_parent(request.id).await?;
 
     let ada = "https://example.org/people/ada".to_string();
     repo.add(team.id, Member::Person(ada.clone()), "member")
@@ -48,7 +50,7 @@ async fn main() -> Result<(), Error> {
         Delegations::may_do(&repo, dept.id, &ada, Right::AddMembers).await?
     );
 
-    match repo.add_parent(dept.id, team.id).await {
+    match repo.request_parent(dept.id, team.id).await {
         Err(e @ Error::Cycle { .. }) => println!("{e}"),
         other => println!("unexpected: {other:?}"),
     }

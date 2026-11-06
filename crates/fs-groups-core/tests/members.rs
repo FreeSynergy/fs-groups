@@ -39,16 +39,28 @@ async fn a_membership_is_an_as2_relationship_in_org_membership_form() {
 }
 
 #[tokio::test]
-async fn the_same_person_and_role_twice_is_refused_but_another_role_is_fine() {
+async fn the_same_person_and_role_twice_is_one_membership_another_role_is_another() {
     let r = repo().await;
     let g = r.create("Board", "body").await.unwrap();
     r.add(g.id, Member::Person(person("ada")), "member")
         .await
         .unwrap();
-    assert!(matches!(
-        r.add(g.id, Member::Person(person("ada")), "member").await,
-        Err(Error::Conflict(_))
-    ));
+    // the same triple again is the same membership, not a second one
+    let first = r.direct(g.id).await.unwrap().remove(0);
+    let again = r
+        .add(
+            g.id,
+            Member::Person(format!(" {} ", person("ada"))),
+            "member",
+        )
+        .await
+        .unwrap();
+    assert_eq!(again.id, first.id);
+    assert_eq!(
+        again.member,
+        Member::Person(person("ada")),
+        "stored trimmed"
+    );
     r.add(g.id, Member::Person(person("ada")), "user")
         .await
         .unwrap();
@@ -63,7 +75,7 @@ async fn a_group_as_member_is_refused_nesting_has_its_own_call() {
         r.create("b", "team").await.unwrap(),
     );
     let err = r.add(a.id, Member::Group(b.id), "").await.unwrap_err();
-    assert!(err.to_string().contains("add_parent"));
+    assert!(err.to_string().contains("request_parent"));
 }
 
 #[tokio::test]

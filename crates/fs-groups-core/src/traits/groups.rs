@@ -11,7 +11,7 @@ use fs_store::ObjectId;
 
 use super::walk::walk;
 use crate::error::Result;
-use crate::model::{Cursor, Group, Page, RightFlow};
+use crate::model::{Cursor, Group, Page, ParentRequest, RightFlow};
 use crate::unsupported::not_possible;
 
 /// Groups and their nesting. Interface status: draft (ADR 0045).
@@ -49,8 +49,21 @@ pub trait Groups: Send + Sync {
     async fn delete(&self, _id: ObjectId) -> Result<()> {
         not_possible("group.delete")
     }
-    /// `group.nest`: make `parent` a parent of `id`. A cycle is refused.
-    async fn add_parent(&self, _id: ObjectId, _parent: ObjectId) -> Result<Group> {
+    /// `group.nest`: ask for `parent` to become a parent of `child`. **Nothing is linked yet**: the
+    /// parent's side has to approve (provisional). A cycle is refused.
+    async fn request_parent(&self, _child: ObjectId, _parent: ObjectId) -> Result<ParentRequest> {
+        not_possible("group.nest")
+    }
+    /// `group.nest`: approve a request on behalf of its parent; the link is made. Returns the child.
+    async fn approve_parent(&self, _request: ObjectId) -> Result<Group> {
+        not_possible("group.nest")
+    }
+    /// `group.nest`: decline a request on behalf of its parent.
+    async fn decline_parent(&self, _request: ObjectId) -> Result<()> {
+        not_possible("group.nest")
+    }
+    /// `group.nest`: the requests made to `parent`, in any state, oldest first.
+    async fn parent_requests(&self, _parent: ObjectId) -> Result<Vec<ParentRequest>> {
         not_possible("group.nest")
     }
     /// `group.nest`: end the link between `id` and `parent`.

@@ -17,7 +17,7 @@ async fn world() -> (
         r.create("dept", "department").await.unwrap(),
         r.create("team", "team").await.unwrap(),
     );
-    r.add_parent(team.id, dept.id).await.unwrap();
+    common::link(&r, team.id, dept.id).await;
     r.add(team.id, Member::Person(person("ada")), "member")
         .await
         .unwrap();

@@ -24,39 +24,14 @@ impl GroupRepo {
         }
     }
 
-    /// `group.nest`: make `parent` a parent of `id`. Refused when `id` is `parent` or already one of
-    /// its ancestors, with the chain that would close the loop. Adding a present link changes nothing.
-    pub async fn add_parent(&self, id: ObjectId, parent: ObjectId) -> Result<Group> {
-        let _write = self.lock.lock().await;
-        let graph = self.known_graph(id).await?;
-        if !graph.contains(parent) {
-            return Err(Error::NotFound {
-                what: "group",
-                id: parent,
-            });
-        }
-        if let Some(path) = graph.path_up(parent, id) {
-            return Err(Error::Cycle {
-                group: id,
-                parent,
-                path,
-            });
-        }
-        let mut g = self.require(id).await?;
-        if !g.parents.contains(&parent) {
-            g.parents.push(parent);
-            self.save(&g).await?;
-        }
-        Ok(g)
-    }
-
     /// `group.nest`: end the link between `id` and `parent`. Removing an absent link changes nothing.
+    /// Either side may end a link; nothing checks who asks.
     pub async fn remove_parent(&self, id: ObjectId, parent: ObjectId) -> Result<Group> {
-        let _write = self.lock.lock().await;
-        let mut g = self.require(id).await?;
+        let w = self.writer().await;
+        let mut g = w.require(id).await?;
         if g.parents.contains(&parent) {
             g.parents.retain(|p| *p != parent);
-            self.save(&g).await?;
+            w.save(&g).await?;
         }
         Ok(g)
     }

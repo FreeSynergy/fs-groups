@@ -73,7 +73,7 @@ async fn a_missing_method_says_not_possible_with_its_capability_id() {
     not_possible(g.create("x", "y").await, "group.create");
     not_possible(g.rename(id, "x").await, "group.update");
     not_possible(g.delete(id).await, "group.delete");
-    not_possible(g.add_parent(id, id).await, "group.nest");
+    not_possible(g.request_parent(id, id).await, "group.nest");
     assert!(
         g.ancestors(id).await.unwrap().is_empty(),
         "provided in terms of parents"

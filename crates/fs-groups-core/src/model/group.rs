@@ -55,7 +55,8 @@ impl Group {
             id,
             iri: text("id")?,
             name: text("name")?,
-            kind: text("fs:kind")?,
+            // A group without a kind is still a group (the kind is free text and may be empty).
+            kind: text("fs:kind").unwrap_or_default(),
             parents,
             // An object written before the setting existed has none: it passes nothing on.
             right_flow: text("fs:rightFlow")

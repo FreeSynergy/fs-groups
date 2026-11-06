@@ -40,12 +40,21 @@ impl DirectoryGroup {
 pub trait GroupDirectory: Send + Sync {
     /// What this directory can do, per capability id.
     fn capabilities(&self) -> Capabilities;
+    /// Who this directory is: one value per directory, stable across runs and different for two
+    /// directories of one provider (for example the URL of the Kanidm instance). The mirror ledger
+    /// is kept under it. The default is the provider name, which two directories of one provider
+    /// **share**: an adapter that can run twice must override it (`fs-identity` for Kanidm).
+    fn directory_id(&self) -> String {
+        self.capabilities().provider().to_string()
+    }
     /// `directory.read`: one group by fs-groups id, if the directory holds it.
     async fn read(&self, id: ObjectId) -> Result<Option<DirectoryGroup>>;
     /// `directory.read`: every group the directory holds that fs-groups put there.
     async fn list(&self) -> Result<Vec<DirectoryGroup>>;
 
-    /// `directory.apply`: bring the group in the directory to this state. Idempotent.
+    /// `directory.apply`: bring the group in the directory to this state. Idempotent. A person the
+    /// directory cannot map to an account must not stop the rest: apply everything else (also the
+    /// removals) and answer [`Error::Unmapped`](crate::Error::Unmapped) with the people left out.
     async fn apply(&self, _group: &DirectoryGroup) -> Result<()> {
         not_possible("directory.apply")
     }

@@ -67,7 +67,7 @@ async fn none_keeps_a_right_on_its_own_group() {
         mk(&r, "p", RightFlow::None).await,
         mk(&r, "c", RightFlow::None).await,
     );
-    r.add_parent(c.id, p.id).await.unwrap();
+    common::link(&r, c.id, p.id).await;
     holds(&r, &p, "ada").await;
     assert!(may(&r, &p, "ada").await);
     assert!(!may(&r, &c, "ada").await);
@@ -76,39 +76,44 @@ async fn none_keeps_a_right_on_its_own_group() {
 }
 
 #[tokio::test]
-async fn down_reaches_children_onward_while_each_passes_down() {
+async fn down_reaches_children_that_pass_down_too_and_onward() {
     let r = repo().await;
     let top = mk(&r, "top", RightFlow::Down).await;
     let mid = mk(&r, "mid", RightFlow::Down).await;
     let low = mk(&r, "low", RightFlow::None).await;
     let beyond = mk(&r, "beyond", RightFlow::Down).await;
-    r.add_parent(mid.id, top.id).await.unwrap();
-    r.add_parent(low.id, mid.id).await.unwrap();
-    r.add_parent(beyond.id, low.id).await.unwrap();
+    let deeper = mk(&r, "deeper", RightFlow::Down).await;
+    common::link(&r, deeper.id, mid.id).await;
+    common::link(&r, mid.id, top.id).await;
+    common::link(&r, low.id, mid.id).await;
+    common::link(&r, beyond.id, low.id).await;
     holds(&r, &top, "ada").await;
     assert!(may(&r, &mid, "ada").await);
+    assert!(may(&r, &deeper, "ada").await);
     assert!(
-        may(&r, &low, "ada").await,
-        "low is reached, it just does not go on"
+        !may(&r, &low, "ada").await,
+        "low says none: nothing is pushed onto it"
     );
-    assert!(!may(&r, &beyond, "ada").await, "low does not pass down");
+    assert!(!may(&r, &beyond, "ada").await, "behind low");
     // and not upward
     holds(&r, &mid, "bo").await;
     assert!(!may(&r, &top, "bo").await);
 }
 
 #[tokio::test]
-async fn the_group_the_right_passes_from_decides_not_the_one_it_reaches() {
+async fn both_ends_of_a_link_must_agree_before_a_right_crosses_it() {
     let r = repo().await;
     // a parent that does not pass, a child that would pass down: nothing moves
     let p = mk(&r, "p", RightFlow::None).await;
     let c = mk(&r, "c", RightFlow::Down).await;
-    r.add_parent(c.id, p.id).await.unwrap();
+    common::link(&r, c.id, p.id).await;
     holds(&r, &p, "ada").await;
     assert!(!may(&r, &c, "ada").await);
-    // a parent that passes down into a child that says none: the child is reached
+    // a parent that passes down into a child that says none: the child refuses it
     r.set_right_flow(p.id, RightFlow::Down).await.unwrap();
     r.set_right_flow(c.id, RightFlow::None).await.unwrap();
+    assert!(!may(&r, &c, "ada").await);
+    r.set_right_flow(c.id, RightFlow::Down).await.unwrap();
     assert!(may(&r, &c, "ada").await);
 }
 
@@ -118,13 +123,13 @@ async fn up_reaches_parents_onward_while_each_passes_up() {
     let top = mk(&r, "top", RightFlow::Up).await;
     let mid = mk(&r, "mid", RightFlow::Up).await;
     let low = mk(&r, "low", RightFlow::Up).await;
-    r.add_parent(mid.id, top.id).await.unwrap();
-    r.add_parent(low.id, mid.id).await.unwrap();
+    common::link(&r, mid.id, top.id).await;
+    common::link(&r, low.id, mid.id).await;
     holds(&r, &low, "ada").await;
     assert!(may(&r, &mid, "ada").await);
     assert!(may(&r, &top, "ada").await);
     r.set_right_flow(mid.id, RightFlow::None).await.unwrap();
-    assert!(may(&r, &mid, "ada").await);
+    assert!(!may(&r, &mid, "ada").await, "mid says none");
     assert!(!may(&r, &top, "ada").await, "mid does not pass up");
     holds(&r, &top, "bo").await;
     assert!(!may(&r, &low, "bo").await, "up does not go down");
@@ -136,14 +141,14 @@ async fn a_diamond_is_walked_once_and_a_mixed_branch_stops_there() {
     let top = mk(&r, "top", RightFlow::Down).await;
     let left = mk(&r, "left", RightFlow::Down).await;
     let right = mk(&r, "right", RightFlow::None).await;
-    let bottom = mk(&r, "bottom", RightFlow::None).await;
+    let bottom = mk(&r, "bottom", RightFlow::Down).await;
     for (c, p) in [
         (&left, &top),
         (&right, &top),
         (&bottom, &left),
         (&bottom, &right),
     ] {
-        r.add_parent(c.id, p.id).await.unwrap();
+        common::link(&r, c.id, p.id).await;
     }
     holds(&r, &top, "ada").await;
     assert!(
@@ -155,7 +160,7 @@ async fn a_diamond_is_walked_once_and_a_mixed_branch_stops_there() {
         !may(&r, &bottom, "ada").await,
         "neither branch passes down any more"
     );
-    assert!(may(&r, &left, "ada").await && may(&r, &right, "ada").await);
+    assert!(!may(&r, &left, "ada").await && !may(&r, &right, "ada").await);
 }
 
 #[tokio::test]
@@ -163,9 +168,9 @@ async fn manage_still_implies_the_others_across_a_flow() {
     let r = repo().await;
     let (p, c) = (
         mk(&r, "p", RightFlow::Down).await,
-        mk(&r, "c", RightFlow::None).await,
+        mk(&r, "c", RightFlow::Down).await,
     );
-    r.add_parent(c.id, p.id).await.unwrap();
+    common::link(&r, c.id, p.id).await;
     r.grant(p.id, Member::Person(person("ada")), Right::Manage)
         .await
         .unwrap();

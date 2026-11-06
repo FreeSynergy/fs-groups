@@ -4,9 +4,7 @@
 mod common;
 
 use common::{at, person, repo, setup, slow_repos};
-use fs_groups_core::{
-    Divergence, Error, GroupRepo, InvitationState, Member, Mirror, Right, RightFlow,
-};
+use fs_groups_core::{Divergence, GroupRepo, InvitationState, Member, Mirror, Right, RightFlow};
 
 // ---- A: accept ----
 
@@ -48,10 +46,7 @@ async fn a_revoke_that_succeeded_is_never_followed_by_accepted() {
         let g = rs[0].create("Club", "club").await.unwrap();
         let inv = rs[0].invite(g.id, &person("ada"), "", None).await.unwrap();
         let ada = person("ada");
-        let (acc, rev) = tokio::join!(
-            rs[0].accept(inv.id, &ada, at(1)),
-            rs[1].revoke(inv.id),
-        );
+        let (acc, rev) = tokio::join!(rs[0].accept(inv.id, &ada, at(1)), rs[1].revoke(inv.id),);
         let state = rs[0].invitations(g.id).await.unwrap()[0].state;
         if rev.is_ok() {
             assert!(acc.is_err());
@@ -71,13 +66,16 @@ async fn concurrent_updates_of_one_group_all_stay() {
         let rs = slow_repos(3).await;
         let g = rs[0].create("old", "old").await.unwrap();
         let p = rs[0].create("parent", "t").await.unwrap();
+        let ask = rs[0].request_parent(g.id, p.id).await.unwrap();
         let (a, b, c, d) = tokio::join!(
             rs[0].rename(g.id, "new"),
             rs[1].set_kind(g.id, "new-kind"),
             rs[2].set_right_flow(g.id, RightFlow::Down),
-            rs[0].add_parent(g.id, p.id),
+            rs[0].approve_parent(ask.id),
         );
-        (a.unwrap(), b.unwrap(), c.unwrap(), d.unwrap());
+        for done in [a.map(|_| ()), b.map(|_| ()), c.map(|_| ()), d.map(|_| ())] {
+            done.unwrap();
+        }
         let now = rs[0].get(g.id).await.unwrap().unwrap();
         assert_eq!(
             (now.name.as_str(), now.kind.as_str(), now.right_flow),
@@ -141,8 +139,12 @@ async fn may_do_ignores_a_holder_group_that_is_gone() {
     let (r, store) = setup().await;
     let g = r.create("g", "t").await.unwrap();
     let h = r.create("h", "t").await.unwrap();
-    r.add(h.id, Member::Person(person("ada")), "").await.unwrap();
-    r.grant(g.id, Member::Group(h.id), Right::Read).await.unwrap();
+    r.add(h.id, Member::Person(person("ada")), "")
+        .await
+        .unwrap();
+    r.grant(g.id, Member::Group(h.id), Right::Read)
+        .await
+        .unwrap();
     store.delete(h.id, common::ME).await.unwrap(); // bypasses the cascade
     assert!(!r.may_do(g.id, &person("ada"), Right::Read).await.unwrap());
 }
@@ -163,7 +165,11 @@ async fn two_instances_over_one_store_cannot_store_a_cycle() {
         let rs: Vec<GroupRepo> = slow_repos(2).await;
         let x = rs[0].create("x", "t").await.unwrap();
         let y = rs[0].create("y", "t").await.unwrap();
-        let (_, _) = tokio::join!(rs[0].add_parent(x.id, y.id), rs[1].add_parent(y.id, x.id));
+        // both requests are fine one at a time; approving both would close the loop
+        let xy = rs[0].request_parent(x.id, y.id).await.unwrap();
+        let yx = rs[1].request_parent(y.id, x.id).await.unwrap();
+        let (a, b) = tokio::join!(rs[0].approve_parent(xy.id), rs[1].approve_parent(yx.id));
+        assert!(a.is_ok() != b.is_ok(), "one approval, one refusal");
         let (gx, gy) = (
             rs[0].get(x.id).await.unwrap().unwrap(),
             rs[0].get(y.id).await.unwrap().unwrap(),
@@ -183,16 +189,24 @@ async fn every_nested_edge_is_reported_since_the_directory_gives_more() {
     let parent = r.create("parent", "t").await.unwrap();
     let child = r.create("child", "t").await.unwrap();
     r.set_right_flow(child.id, RightFlow::Up).await.unwrap();
-    r.add_parent(child.id, parent.id).await.unwrap();
-    r.add(child.id, Member::Person(person("ada")), "").await.unwrap();
-    r.grant(parent.id, Member::Group(parent.id), Right::Read).await.unwrap();
-    assert!(!r.may_do(parent.id, &person("ada"), Right::Read).await.unwrap());
+    common::link(&r, child.id, parent.id).await;
+    r.add(child.id, Member::Person(person("ada")), "")
+        .await
+        .unwrap();
+    r.grant(parent.id, Member::Group(parent.id), Right::Read)
+        .await
+        .unwrap();
+    assert!(
+        !r.may_do(parent.id, &person("ada"), Right::Read)
+            .await
+            .unwrap()
+    );
     // the directory makes ada memberof the parent and so gives her its right
     assert_eq!(
         r.divergences().await.unwrap(),
-        vec![Divergence { group: child.id, parent: parent.id }]
+        vec![Divergence {
+            group: child.id,
+            parent: parent.id
+        }]
     );
 }
-
-#[allow(dead_code)]
-fn _uses(_: Error) {}

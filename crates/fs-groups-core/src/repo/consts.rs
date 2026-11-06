@@ -10,6 +10,8 @@ pub const MEMBERSHIP_TYPE: &str = "Relationship";
 pub const INVITATION_TYPE: &str = "Invite";
 /// Type of a delegation in the store; AS2 has none.
 pub const DELEGATION_TYPE: &str = "Delegation";
+/// Type of a request to nest a group under a parent in the store (provisional).
+pub const PARENT_REQUEST_TYPE: &str = "ParentRequest";
 /// `context` of all objects of this program.
 pub const CONTEXT: &str = "groups";
 pub(super) const LEDGER_TYPE: &str = "MirrorLedger";

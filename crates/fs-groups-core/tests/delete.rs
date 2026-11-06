@@ -13,8 +13,8 @@ async fn delete_removes_memberships_invitations_delegations_and_links() {
         r.create("m", "t").await.unwrap(),
         r.create("c", "t").await.unwrap(),
     );
-    r.add_parent(mid.id, parent.id).await.unwrap();
-    r.add_parent(child.id, mid.id).await.unwrap();
+    common::link(&r, mid.id, parent.id).await;
+    common::link(&r, child.id, mid.id).await;
     let ada = person("ada");
     r.add(mid.id, Member::Person(ada.clone()), "")
         .await

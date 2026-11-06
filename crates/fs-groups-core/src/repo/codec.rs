@@ -5,7 +5,9 @@
 
 use fs_store::{ObjectId, StoredObject};
 
-use crate::model::{Delegation, Invitation, InvitationState, Member, Membership, Right};
+use crate::model::{
+    Delegation, Invitation, InvitationState, Member, Membership, ParentRequest, RequestState, Right,
+};
 
 fn one<'a>(o: &'a StoredObject, key: &str) -> Option<&'a str> {
     o.index.get(key)?.first().map(String::as_str)
@@ -45,5 +47,15 @@ pub(super) fn delegation(o: &StoredObject) -> Option<Delegation> {
         group: id_of(o, "group")?,
         holder: member_of(o, "holder_kind", "holder")?,
         right: Right::parse(one(o, "right")?)?,
+    })
+}
+
+pub(super) fn parent_request(o: &StoredObject) -> Option<ParentRequest> {
+    Some(ParentRequest {
+        id: o.envelope.id,
+        child: id_of(o, "child")?,
+        parent: id_of(o, "parent_of")?,
+        requester: o.envelope.attributed_to.clone().unwrap_or_default(),
+        state: RequestState::parse(one(o, "state")?)?,
     })
 }

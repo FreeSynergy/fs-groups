@@ -51,14 +51,14 @@ async fn manage_implies_the_others() {
 }
 
 #[tokio::test]
-async fn a_right_held_by_a_group_counts_for_its_members_nested_ones_when_it_passes_down() {
+async fn a_right_held_by_a_group_counts_for_its_direct_members_whatever_its_flow() {
     let r = repo().await;
     let (club, board, inner) = (
         r.create("club", "t").await.unwrap(),
         r.create("board", "t").await.unwrap(),
         r.create("inner", "t").await.unwrap(),
     );
-    r.add_parent(inner.id, board.id).await.unwrap();
+    common::link(&r, inner.id, board.id).await;
     r.add(board.id, Member::Person(person("boss")), "")
         .await
         .unwrap();
@@ -79,9 +79,10 @@ async fn a_right_held_by_a_group_counts_for_its_members_nested_ones_when_it_pass
             .await
             .unwrap()
     );
+    // safe reading (provisional): the board's flow does not carry the right to members of children
     r.set_right_flow(board.id, RightFlow::Down).await.unwrap();
     assert!(
-        r.may_do(club.id, &person("deep"), Right::RemoveMembers)
+        !r.may_do(club.id, &person("deep"), Right::RemoveMembers)
             .await
             .unwrap()
     );
@@ -134,7 +135,7 @@ async fn a_right_on_a_parent_does_not_reach_the_child_by_default() {
         r.create("p", "t").await.unwrap(),
         r.create("c", "t").await.unwrap(),
     );
-    r.add_parent(c.id, p.id).await.unwrap();
+    common::link(&r, c.id, p.id).await;
     r.grant(p.id, Member::Person(person("ada")), Right::Manage)
         .await
         .unwrap();

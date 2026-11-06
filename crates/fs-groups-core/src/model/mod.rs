@@ -7,6 +7,7 @@ mod group;
 mod invitation;
 mod member;
 mod page;
+mod parent_request;
 mod right_flow;
 
 pub use delegation::{Delegation, Right};
@@ -14,4 +15,5 @@ pub use group::{Group, NS};
 pub use invitation::{Invitation, InvitationState};
 pub use member::{EffectiveMember, Member, Membership};
 pub use page::{Cursor, Page};
+pub use parent_request::{ParentRequest, RequestState};
 pub use right_flow::RightFlow;

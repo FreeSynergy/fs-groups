@@ -24,8 +24,10 @@ pub trait Delegations: Send + Sync {
     async fn revoke(&self, _id: ObjectId) -> Result<()> {
         not_possible("right.grant")
     }
-    /// `right.read`: whether `person` holds `right` on `group`, directly or through a group they
-    /// belong to. `Manage` implies the others.
+    /// `right.read`: whether `person` holds `right` on `group`: as the holder, or as a direct member of
+    /// a holder group, where the right applies as the groups' right flow says (the safe, provisional
+    /// reading in `right_flow`: both ends of a link must agree; nothing reaches members of other
+    /// groups). `Manage` implies the others. In doubt the answer is no; an unknown group is an error.
     async fn may_do(&self, _group: ObjectId, _person: &str, _right: Right) -> Result<bool> {
         not_possible("right.read")
     }

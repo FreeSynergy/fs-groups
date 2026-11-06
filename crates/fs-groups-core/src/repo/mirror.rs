@@ -1,9 +1,9 @@
 //! The mirror side of the repository: the wanted directory state, and the ledger of what we mirrored.
 //!
 //! Pattern: Repository + Adapter — `desired` turns groups and direct people into `DirectoryGroup`s;
-//! the ledger is one store object per directory name, so "only remove what we put there" survives restarts.
+//! the ledger is one store object per directory identity, so "only remove what we put there" survives restarts.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use async_trait::async_trait;
 use fs_store::{ObjectId, Query, StoredObject};
@@ -32,10 +32,11 @@ impl GroupRepo {
 impl Mirror for GroupRepo {
     async fn desired(&self) -> Result<Vec<DirectoryGroup>> {
         let groups = self.all_groups().await?;
+        let by_id: BTreeMap<_, _> = groups.iter().map(|g| (g.id, g)).collect();
         let graph = crate::graph::Graph::from_groups(&groups);
         let mut out = vec![];
         for id in graph.children_first() {
-            let Some(g) = groups.iter().find(|g| g.id == id) else {
+            let Some(g) = by_id.get(&id) else {
                 continue;
             };
             let members = self
@@ -59,20 +60,22 @@ impl Mirror for GroupRepo {
         Ok(out)
     }
 
+    async fn unreadable(&self) -> Result<Vec<ObjectId>> {
+        Ok(self.read_groups().await?.1)
+    }
+
     async fn divergences(&self) -> Result<Vec<Divergence>> {
         let groups = self.all_groups().await?;
         let graph = crate::graph::Graph::from_groups(&groups);
+        let flows = right_flow::settings(&groups);
         let mut out: Vec<_> = groups
             .iter()
-            .filter(|g| !right_flow::directory_expresses(g.right_flow))
-            .flat_map(|g| {
-                graph.parents(g.id).iter().map(|p| Divergence {
-                    group: g.id,
-                    parent: *p,
-                })
-            })
+            .flat_map(|g| graph.parents(g.id).iter().map(|p| (g.id, *p)))
+            .filter(|(child, parent)| !right_flow::directory_expresses(&flows, *child, *parent))
+            .map(|(group, parent)| Divergence { group, parent })
             .collect();
         out.sort_by_key(|d| (d.group, d.parent));
+        out.dedup();
         Ok(out)
     }
 
@@ -88,22 +91,22 @@ impl Mirror for GroupRepo {
     }
 
     async fn remember(&self, directory: &str, ids: &BTreeSet<ObjectId>) -> Result<()> {
+        let w = self.writer().await;
         let list: Vec<_> = ids.iter().map(ToString::to_string).collect();
         let content = json!({"@context": context(), "type": LEDGER_TYPE, "fs:directory": directory, "ids": list});
-        let mut obj = match self.ledger(directory).await? {
+        let mut obj = match w.ledger(directory).await? {
             Some(mut o) => {
                 o.content = content;
                 o
             }
             None => StoredObject::new(
-                self.fresh_envelope(LEDGER_TYPE, &format!("mirror ledger of {directory}")),
+                w.fresh_envelope(LEDGER_TYPE, &format!("mirror ledger of {directory}")),
                 AS2_TYPE,
                 content,
             )
             .with_index("directory", directory),
         };
         obj.envelope.updated = chrono::Utc::now();
-        self.objects.put(obj, &self.actor).await?;
-        Ok(())
+        w.put(obj).await
     }
 }

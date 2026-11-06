@@ -58,6 +58,15 @@ pub enum Error {
         /// The step that was tried (`accepted`, `declined`, ...).
         step: &'static str,
     },
+    /// The person who tried to answer is not the one invited.
+    #[error("invitation {0} was not sent to this person")]
+    NotInvitee(ObjectId),
+    /// The acting person may not do this (see the notes on what is and is not enforced in `DESIGN.md`).
+    #[error("forbidden: {0}")]
+    Forbidden(String),
+    /// The directory applied the group but could not map these people (they are left out).
+    #[error("directory could not map these people: {}", .0.join(", "))]
+    Unmapped(Vec<String>),
     /// The invitation ran out before it was answered (it is now stored as `expired`).
     #[error("invitation {0} has expired")]
     Expired(ObjectId),

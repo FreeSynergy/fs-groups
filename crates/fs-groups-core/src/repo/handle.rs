@@ -3,47 +3,93 @@
 //! Pattern: Repository + Facade — one small type hides the object store and the envelope rules behind
 //! `Groups`, `Memberships`, `Invitations`, `Delegations` and `Mirror`. Its collaborators are injected
 //! as the narrow store traits `ObjectRepository` and `ObjectQuery`, so each can be swapped.
+//!
+//! **One write path.** The store handle `objects` is private to this file. The only way to put or
+//! delete an object is a [`Writer`], which holds the write lock for as long as it lives. A method that
+//! reads and then writes takes one `Writer` first and does both through it, so a method added later
+//! cannot write without the lock: it does not compile.
+//!
+//! **Single-writer limit.** The lock is process wide and keyed by the identity of the store handle
+//! given at construction, so every `GroupRepo` (clones and separately built ones) over the same
+//! handle shares it. It does not cover a second process, nor a second handle opened on the same
+//! database file; the store has no compare-and-swap to build on. Run one writer per database.
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::ops::Deref;
+use std::sync::{Arc, Mutex as StdMutex, OnceLock, PoisonError, Weak};
 
 use fs_store::traits::{ObjectQuery, ObjectRepository};
-use fs_store::{ObjectId, Store};
-use tokio::sync::Mutex;
+use fs_store::{ObjectId, Store, StoredObject};
+use tokio::sync::{Mutex, MutexGuard};
 
 use super::backend::StoreAdapter;
+use crate::error::Result;
 
 /// Groups over an object store. Cheap to clone; clones share one write lock.
+///
+/// Writes that read first (nesting, renames, memberships, invitations, delegations, delete) run one
+/// at a time per store handle in this process. **Single-writer limit:** that is all the safety there
+/// is. Two processes, or two handles opened on one database file, can still overwrite each other (for
+/// example store a cycle); keep to one writer per database. See `DESIGN.md`.
 #[derive(Clone)]
 pub struct GroupRepo {
-    pub(super) objects: Arc<dyn ObjectRepository>,
+    objects: Arc<dyn ObjectRepository>,
     pub(super) reads: Arc<dyn ObjectQuery>,
     pub(super) actor: String,
     pub(super) instance: String,
     pub(super) page_size: usize,
-    /// Serialises the writes that read first (nesting, delete), so two cannot form a cycle together.
-    pub(super) lock: Arc<Mutex<()>>,
+    lock: Arc<Mutex<()>>,
+}
+
+/// The locks of all live store handles of this process, by handle identity (an address that cannot be
+/// reused while a `GroupRepo` holds the handle).
+fn lock_for(key: usize) -> Arc<Mutex<()>> {
+    static LOCKS: OnceLock<StdMutex<HashMap<usize, Weak<Mutex<()>>>>> = OnceLock::new();
+    let mut map = LOCKS
+        .get_or_init(Default::default)
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    map.retain(|_, w| w.strong_count() > 0);
+    if let Some(live) = map.get(&key).and_then(Weak::upgrade) {
+        return live;
+    }
+    let fresh = Arc::new(Mutex::new(()));
+    map.insert(key, Arc::downgrade(&fresh));
+    fresh
 }
 
 impl GroupRepo {
     /// Groups over a whole [`Store`]. `actor` is the IRI of the acting person / program (log).
     pub fn new(store: Arc<dyn Store>, actor: impl Into<String>) -> Self {
+        let key = Arc::as_ptr(&store).cast::<()>().addr();
         let adapter = Arc::new(StoreAdapter(store));
-        Self::with_backend(adapter.clone(), adapter, actor)
+        Self::build(adapter.clone(), adapter, actor.into(), key)
     }
 
-    /// Groups over the narrow store traits only (a remote or fake backend can supply them).
+    /// Groups over the narrow store traits only (a remote or fake backend can supply them). The write
+    /// lock is shared with every other repository built over the same `objects` handle.
     pub fn with_backend(
         objects: Arc<dyn ObjectRepository>,
         reads: Arc<dyn ObjectQuery>,
         actor: impl Into<String>,
     ) -> Self {
+        let key = Arc::as_ptr(&objects).cast::<()>().addr();
+        Self::build(objects, reads, actor.into(), key)
+    }
+
+    fn build(
+        objects: Arc<dyn ObjectRepository>,
+        reads: Arc<dyn ObjectQuery>,
+        actor: String,
+        key: usize,
+    ) -> Self {
         Self {
             objects,
             reads,
-            actor: actor.into(),
+            actor,
             instance: "local.invalid".into(),
             page_size: 100,
-            lock: Arc::new(Mutex::new(())),
+            lock: lock_for(key),
         }
     }
 
@@ -63,5 +109,46 @@ impl GroupRepo {
 
     pub(super) fn iri(&self, id: ObjectId) -> String {
         format!("https://{}/groups/{}", self.instance, id)
+    }
+
+    /// One stored object by id (a read; no lock).
+    pub(super) async fn load(&self, id: ObjectId) -> Result<Option<StoredObject>> {
+        Ok(self.objects.get(id).await?)
+    }
+
+    /// Take the write lock. Everything that writes goes through the returned [`Writer`].
+    pub(super) async fn writer(&self) -> Writer<'_> {
+        Writer {
+            repo: self,
+            _guard: self.lock.lock().await,
+        }
+    }
+}
+
+/// The write lock held, and the only way to put or delete a stored object. Reads (all methods of
+/// [`GroupRepo`]) are available through `Deref` and see no other writer's half-done work.
+pub(super) struct Writer<'a> {
+    repo: &'a GroupRepo,
+    _guard: MutexGuard<'a, ()>,
+}
+
+impl Deref for Writer<'_> {
+    type Target = GroupRepo;
+    fn deref(&self) -> &GroupRepo {
+        self.repo
+    }
+}
+
+impl Writer<'_> {
+    /// Store an object (create or replace).
+    pub(super) async fn put(&self, object: StoredObject) -> Result<()> {
+        self.repo.objects.put(object, &self.repo.actor).await?;
+        Ok(())
+    }
+
+    /// Remove an object.
+    pub(super) async fn remove_object(&self, id: ObjectId) -> Result<()> {
+        self.repo.objects.delete(id, &self.repo.actor).await?;
+        Ok(())
     }
 }

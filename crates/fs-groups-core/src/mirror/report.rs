@@ -17,17 +17,28 @@ pub struct SyncReport {
     pub removed: Vec<ObjectId>,
     /// Groups the directory refused, with its message. The next run tries again.
     pub failed: Vec<(ObjectId, String)>,
-    /// Nested edges the directory holds although the child's setting says otherwise; it cannot
-    /// express them. Reported, not adapted: what is applied stays as it is.
+    /// Nested edges where the directory gives more than the groups' own rights do (provisional,
+    /// see `right_flow`). Reported, not adapted: what is applied stays as it is.
     pub divergences: Vec<Divergence>,
+    /// `(parent, child)`: a child the directory does not hold (refused, or not applied), so the
+    /// parent was applied without it. The next run tries again.
+    pub unnested: Vec<(ObjectId, ObjectId)>,
+    /// Groups applied except for these people, whom the directory could not map to an account.
+    pub unmapped: Vec<(ObjectId, Vec<String>)>,
+    /// Stored groups that cannot be read as a group. They are left in the directory, never removed.
+    pub unreadable: Vec<ObjectId>,
+    /// The ledger could not be tidied up after the run (the intent written before the run stands, so
+    /// nothing is lost; ids of removed groups stay in it until the next run).
+    pub ledger_error: Option<String>,
 }
 
-/// A group whose right-flow setting the directory cannot express (provisional, see `right_flow`).
+/// A nested edge where the directory gives more than the groups' rights do (provisional, see
+/// `right_flow`): there, every member of `group` is a member of `parent` and gets what it holds.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Divergence {
-    /// The child group whose setting is not kept.
+    /// The child group.
     pub group: ObjectId,
-    /// The parent in the directory it is nested in, against its setting.
+    /// The parent it is nested in.
     pub parent: ObjectId,
 }
 
@@ -38,5 +49,8 @@ impl SyncReport {
             && self.updated.is_empty()
             && self.removed.is_empty()
             && self.failed.is_empty()
+            && self.unnested.is_empty()
+            && self.unmapped.is_empty()
+            && self.ledger_error.is_none()
     }
 }

@@ -10,8 +10,8 @@ use fs_store::{ObjectId, Timestamp};
 use super::handle::GroupRepo;
 use crate::error::Result;
 use crate::model::{
-    Cursor, Delegation, EffectiveMember, Group, Invitation, Member, Membership, Page, Right,
-    RightFlow,
+    Cursor, Delegation, EffectiveMember, Group, Invitation, Member, Membership, Page,
+    ParentRequest, Right, RightFlow,
 };
 use crate::traits::{Delegations, Groups, Invitations, Memberships};
 
@@ -47,8 +47,17 @@ impl Groups for GroupRepo {
     async fn delete(&self, id: ObjectId) -> Result<()> {
         GroupRepo::delete(self, id).await
     }
-    async fn add_parent(&self, id: ObjectId, parent: ObjectId) -> Result<Group> {
-        GroupRepo::add_parent(self, id, parent).await
+    async fn request_parent(&self, child: ObjectId, parent: ObjectId) -> Result<ParentRequest> {
+        GroupRepo::request_parent(self, child, parent).await
+    }
+    async fn approve_parent(&self, request: ObjectId) -> Result<Group> {
+        GroupRepo::approve_parent(self, request).await
+    }
+    async fn decline_parent(&self, request: ObjectId) -> Result<()> {
+        GroupRepo::decline_parent(self, request).await
+    }
+    async fn parent_requests(&self, parent: ObjectId) -> Result<Vec<ParentRequest>> {
+        GroupRepo::parent_requests(self, parent).await
     }
     async fn remove_parent(&self, id: ObjectId, parent: ObjectId) -> Result<Group> {
         GroupRepo::remove_parent(self, id, parent).await
@@ -99,6 +108,15 @@ impl Invitations for GroupRepo {
     }
     async fn accept(&self, id: ObjectId, person: &str, now: Timestamp) -> Result<Membership> {
         GroupRepo::accept(self, id, person, now).await
+    }
+    async fn accept_proved(
+        &self,
+        id: ObjectId,
+        person: &str,
+        proved_address: &str,
+        now: Timestamp,
+    ) -> Result<Membership> {
+        GroupRepo::accept_proved(self, id, person, proved_address, now).await
     }
     async fn decline(&self, id: ObjectId) -> Result<()> {
         GroupRepo::decline(self, id).await

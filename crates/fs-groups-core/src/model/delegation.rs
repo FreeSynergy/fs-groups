@@ -55,7 +55,7 @@ pub struct Delegation {
     pub id: ObjectId,
     /// The group the right is about.
     pub group: ObjectId,
-    /// Who holds it: a person, or a group (then all its members, nested ones included).
+    /// Who holds it: a person, or a group (then its direct members; see `right_flow::recipients`).
     pub holder: Member,
     /// The right.
     pub right: Right,

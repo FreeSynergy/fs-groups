@@ -12,7 +12,7 @@ async fn a_member_of_a_child_belongs_to_the_parent_with_the_path() {
         r.create("dept", "department").await.unwrap(),
         r.create("team", "team").await.unwrap(),
     );
-    r.add_parent(team.id, dept.id).await.unwrap();
+    common::link(&r, team.id, dept.id).await;
     r.add(dept.id, Member::Person(person("boss")), "")
         .await
         .unwrap();
@@ -41,7 +41,7 @@ async fn in_a_diamond_a_person_counts_once() {
         g.push(r.create(n, "team").await.unwrap());
     }
     for (c, p) in [(1, 0), (2, 0), (3, 1), (3, 2)] {
-        r.add_parent(g[c].id, g[p].id).await.unwrap();
+        common::link(&r, g[c].id, g[p].id).await;
     }
     r.add(g[3].id, Member::Person(person("ada")), "")
         .await
@@ -60,7 +60,7 @@ async fn groups_of_and_is_member_follow_nesting_upward() {
         r.create("b", "t").await.unwrap(),
         r.create("c", "t").await.unwrap(),
     );
-    r.add_parent(b.id, a.id).await.unwrap();
+    common::link(&r, b.id, a.id).await;
     r.add(b.id, Member::Person(person("ada")), "")
         .await
         .unwrap();
@@ -80,7 +80,7 @@ async fn effective_membership_ends_on_data_with_a_cycle() {
         r.create("a", "t").await.unwrap(),
         r.create("b", "t").await.unwrap(),
     );
-    r.add_parent(b.id, a.id).await.unwrap();
+    common::link(&r, b.id, a.id).await;
     force_parent(&store, a.id, b.id).await;
     r.add(a.id, Member::Person(person("ada")), "")
         .await
