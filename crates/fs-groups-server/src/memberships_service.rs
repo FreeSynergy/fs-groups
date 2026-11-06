@@ -10,7 +10,8 @@ use fs_interfaces::groups_capnp::memberships;
 
 use crate::errors::rpc_error;
 use crate::wire::{
-    read_id, read_member, read_text, write_effective, write_ids, write_membership, write_memberships,
+    read_id, read_member, read_text, write_effective, write_ids, write_membership,
+    write_memberships,
 };
 
 pub(crate) struct MembershipsImpl {

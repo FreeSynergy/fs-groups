@@ -21,8 +21,7 @@ pub(crate) struct ItemsImpl {
 
 type Done = Result<(), capnp::Error>;
 
-/// The whole list in name order, through the provider's own paging; the wire page is cut afterwards
-/// by weight, which a provider's page does not know about.
+/// The whole list through the provider's paging; the wire page is cut by weight afterwards.
 async fn all_groups(groups: &dyn Groups) -> Result<Vec<Group>, capnp::Error> {
     let mut all = Vec::new();
     let mut cursor = None;

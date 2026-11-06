@@ -55,7 +55,10 @@ pub(crate) async fn approve_parent(
     write_group(results.get().init_group(), &group)
 }
 
-pub(crate) async fn decline_parent(groups: &dyn Groups, params: items::DeclineParentParams) -> Done {
+pub(crate) async fn decline_parent(
+    groups: &dyn Groups,
+    params: items::DeclineParentParams,
+) -> Done {
     let request = read_id(params.get()?.get_request())?;
     groups.decline_parent(request).await.map_err(rpc_error)
 }

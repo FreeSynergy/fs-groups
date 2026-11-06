@@ -4,11 +4,10 @@
 
 use fs_groups_core::{Delegation, Right};
 use fs_interfaces::groups_capnp::{self, delegation};
-use fs_interfaces::rpc::write_object_id;
+use fs_interfaces::rpc::{invalid_request, write_object_id};
 
 use super::basic::{ENTRY_BYTES, list_len};
 use super::member::write_member;
-use crate::errors::invalid;
 
 fn right_to_wire(right: Right) -> groups_capnp::Right {
     match right {
@@ -23,7 +22,7 @@ fn right_to_wire(right: Right) -> groups_capnp::Right {
 pub(crate) fn read_right(
     right: Result<groups_capnp::Right, capnp::NotInSchema>,
 ) -> capnp::Result<Right> {
-    Ok(match right.map_err(|e| invalid(e.to_string()))? {
+    Ok(match right.map_err(|e| invalid_request(e.to_string()))? {
         groups_capnp::Right::Read => Right::Read,
         groups_capnp::Right::AddMembers => Right::AddMembers,
         groups_capnp::Right::RemoveMembers => Right::RemoveMembers,

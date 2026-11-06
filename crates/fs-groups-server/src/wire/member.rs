@@ -4,14 +4,13 @@
 
 use fs_groups_core::{EffectiveMember, Member, Membership};
 use fs_interfaces::groups_capnp::{effective_member, member, membership};
-use fs_interfaces::rpc::write_object_id;
+use fs_interfaces::rpc::{invalid_request, write_object_id};
 
-use super::basic::{ENTRY_BYTES, list_len, read_id, read_text};
-use crate::errors::invalid;
+use super::basic::{ENTRY_BYTES, ID_BYTES, list_len, read_id, read_text};
 
 /// A member of a request.
 pub(crate) fn read_member(r: member::Reader<'_>) -> capnp::Result<Member> {
-    match r.which().map_err(|e| invalid(e.to_string()))? {
+    match r.which().map_err(|e| invalid_request(e.to_string()))? {
         member::Which::Person(person) => Ok(Member::Person(read_text(person)?.to_string())),
         member::Which::Group(group) => Ok(Member::Group(read_id(group)?)),
     }
@@ -56,17 +55,16 @@ pub(crate) fn write_effective<'a>(
 ) -> capnp::Result<()> {
     let bytes = items
         .iter()
-        .map(|m| ENTRY_BYTES + m.person.len() + m.via.len() * 16)
+        .map(|m| ENTRY_BYTES + m.person.len() + m.via.len() * ID_BYTES)
         .sum();
     let mut out = init(list_len(items.len(), bytes)?);
     for (i, m) in (0u32..).zip(items) {
         let mut entry = out.reborrow().get(i);
         entry.set_person(m.person.as_str());
-        let mut via = entry.init_via(list_len(m.via.len(), m.via.len() * 16)?);
+        let mut via = entry.init_via(list_len(m.via.len(), m.via.len() * ID_BYTES)?);
         for (j, id) in (0u32..).zip(&m.via) {
             write_object_id(via.reborrow().get(j), *id);
         }
     }
     Ok(())
 }
-

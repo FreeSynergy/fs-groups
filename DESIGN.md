@@ -1,12 +1,12 @@
 # fs-groups – Design
 
-`fs-groups` is the groups program of FreeSynergy. This repo holds the **program core** (`crates/fs-groups-core`, no GUI).
+`fs-groups` is the groups program of FreeSynergy. This repo holds the **program core** (`crates/fs-groups-core`, no GUI) and its **Cap'n Proto server** (`crates/fs-groups-server`).
 A group is an **AS2 `Group`** in an envelope stored through `fs-store` (ADR 0014, 0020, 0050). It runs alone, without any
-directory (ADR 0024); a directory is only a mirror (ADR 0047). Contract: `groups.capnp` in `fs-interfaces` v0.19.0 (draft).
+directory (ADR 0024); a directory is only a mirror (ADR 0047). Contract: `groups.capnp` in `fs-interfaces` v0.22.0 (draft).
 
 ## State
 
-Version 0.2.0. **Several rules below are provisional: the owner is still answering what up and down mean and who consents to a nesting link.** No tag of this repo until he has.
+Version 0.3.0. **Several rules below are provisional: the owner is still answering what up and down mean and who consents to a nesting link.** No tag of this repo until he has.
 
 | Area | State |
 |---|---|
@@ -24,8 +24,16 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 | Mirror report lists `divergences`: nested edges where the directory gives more than `may_do` (with the safe reading: every edge); reported, not adapted | done |
 | Mirror hardening: ledger written before the directory (intent) and tidied after; keyed by `directory_id`; unreadable groups never removed; a parent applied only with children the directory holds; one unmapped person does not block the group | done |
 | One write path (`Writer` holds the lock), process-wide lock per store handle | done; **single-writer limit, see Decisions** |
-| `group.subscribe`, capnp-rpc server | **not built**; `capabilities()` says "not built yet; it is possible" |
-| Tests | see the final count in the commit message (`tests/*.rs` by feature, real in-memory `TursoStore`, forced interleavings with a slow backend) |
+| `group.subscribe`: `GroupFeed` (Observer) tells every committed write of a group, membership, invitation, delegation or parent request, with the envelope the store committed; `Deleted` carries the id only | done, draft; **what the feed covers is provisional** |
+| `Group.envelope`: the group as stored, as the contract's `Group` has it | done |
+| Server `fs-groups-server`: every method of `Items`, `Memberships`, `Invitations`, `Delegations`, `subscribe`, `supportReport`; `addParent` answers `Unsupported`; typed problems `groups/{not-found 404, cycle 409, conflict 409, invalid-transition 409, not-invitee 403, forbidden 403, expired 410, directory 502, unmapped 502}`, shared `invalid-request` 422 and `too-large` 413; binary with the shared `ServerOptions` | done, draft; **no authenticated caller, see the note below** |
+| Tests | core: `tests/*.rs` by feature, real in-memory `TursoStore`, forced interleavings with a slow backend. Server: over a real Unix socket against the store-backed provider, the real binary across restarts, exit codes and data directory rights |
+
+> **The server does not know who is calling.** The transport only checks that the peer runs as the same system user
+> (`SO_PEERCRED`). `--actor`, the approver of a parent request, `requester` in `ParentRequest`, `person` in `accept` and
+> `mayDo`, and `provedAddress` in `acceptProved` are **plain strings**, never a verified identity, and must not be shown as one.
+> Restarting the server with another `--actor` is all it takes to change who "may approve". A real check needs an
+> authenticated caller in the transport and the contract; neither exists yet (see Open points).
 
 ## Structure and pattern map (ADR 0043)
 
@@ -44,6 +52,10 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 | `repo/provide.rs` | Adapter | trait methods call the inherent ones |
 | `mirror/sync.rs` | Template method | fixed flow: remember intent, read, plan, apply, remove, tidy the ledger |
 | `right_flow.rs` | Strategy (pure) | the one place that says what up and down mean (provisional): effect clause (`reach`, `sources`), recipient clause (`recipients`), `directory_expresses` |
+| `traits/feed.rs` | Observer | `GroupFeed`, `GroupListener`, `Registry` (subject), `Subscription` (drop = unsubscribe) |
+| `repo/notify.rs` | Decorator | wraps the store's `ObjectRepository`, so no write path can forget to tell the feed |
+| `fs-groups-server/{groups,items,nesting,memberships,invitations,delegations}_service.rs` | Adapter + Factory | wire in, one trait call, wire out; depends on the traits only |
+| `fs-groups-server/{wire/*,errors,feed}.rs` | Adapter, Observer | values on the wire with their limits, core errors as RFC 9457 problems, `GroupFeed` to the shared forwarder |
 | `mirror/plan.rs` | Specification (pure) | create / update / keep / remove decided without I/O |
 | `repo/mirror.rs` | Repository | wanted state + the ledger of mirrored ids |
 
@@ -113,13 +125,29 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 * Empty `kind` and `role` are allowed; the store refuses empty index values, so they are just not indexed.
 
 
+## Server decisions (provisional, the owner may change them)
+
+* **`GroupDirectory` is not served here.** fs-groups is its client (`Mirror::sync_to`), `fs-identity` its provider. The contract's root
+  `Groups` hands out no directory and has no method to start a mirror, so a mirror still runs only in-process.
+* **`addParent @6`** answers `Unsupported` (capability id `group.addParent`, also in the report), as the contract says since v0.19.0.
+* **`capabilities` does not exist on the `Groups` root** in the contract (`tasks.capnp` has it), so `Capabilities::write_list` has no place; `supportReport` says what is offered.
+* **Clock:** the core takes the time as an argument; the server reads it for `accept` and `acceptProved`. `Invitations.list` sweeps with `expire_due` first, so `expired` is true when read; a provider without the sweep still answers its list.
+* **Feed:** all stored kinds, not only groups (the consumer tells by `envelope.type`), since a membership change has no other way to reach a consumer. The mirror ledger stays out. A feed belongs to one `GroupRepo` and its clones.
+* **Text limit:** `check_intake` is asked about 16 times the length (a name and kind come back twice, a control character takes six bytes in JSON), so about 1 MiB per field; 413 before anything is stored.
+* **Lists without a cursor** (`direct`, `effective`, `groupsOf`, `parents`, `children`, `ancestors`, `descendants`, invitations, delegations, `parentRequests`) answer 413 rather than end the connection if they would not fit. The contract has no way to page them.
+* **`Items.list`** walks the provider's pages and cuts the wire page by weight, so each page reads the whole list; cursors are places in that list (`fs-interfaces/DESIGN.md`).
+* **`--instance` is gone:** the shared `ServerOptions` has `--socket`, `--data`, `--actor` only, so the binary's IRIs say `local.invalid`. `GroupRepo::with_instance` remains for when the options grow it.
+* **Right flow:** the server maps the enum and nothing else; the meaning stays in `right_flow.rs` and may change there.
+
 ## Open points
 
-* **Enforcement of rights** (`may_do` is not asked by `add`/`remove`/`delete`): needs the acting person on each call; comes with the capnp server.
-* **`group.subscribe`** and the **capnp-rpc server** are not written. The traits return typed values (`Group`, ...), not `StoredObject`.
+* **Authenticated caller.** Nothing in the transport or the contract names one. So `may_do` is asked only for approving a parent request, about `--actor`; `add`, `remove`, `delete`, `grant` and `remove_parent` are not guarded, and every client of this user can do all of it. **This is not enforcement of rights.**
+* **`acceptProved`** passes on an address the client vouches for; the provider verifies nothing. Only as safe as "same system user" for now.
+* **Consent after a grant:** the creator may approve only while a parent has no delegation at all, so one `read` grant ends that, and then only a `manage` holder can approve (the core's rule, provisional).
+* **A group with very many or very large memberships** can make `direct` answer 413 for good, and the membership id needed for `remove` only comes from there. Needs a cursor in the contract.
 * The store's invitation-reply activities (`put_and_log` with `Accept` / `Reject`) are not used yet.
 
 ## Crates
 
-`fs-store` (git tag v0.2.0), `fs-interfaces` (git tag v0.19.0), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full).
+Core: `fs-store` (git tag v0.2.0), `fs-interfaces` (git tag v0.22.0), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full). Server: also `fs-interfaces` feature `rpc`, `capnp`, `capnp-rpc`; dev: `tempfile`, `uuid`.
 All MIT / Apache-2.0. No Kanidm dependency of any kind.

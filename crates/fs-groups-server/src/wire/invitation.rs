@@ -9,7 +9,6 @@ use fs_interfaces::rpc::{from_millis, to_millis, write_object_id};
 use fs_store::Timestamp;
 
 use super::basic::{ENTRY_BYTES, list_len};
-use crate::errors::invalid;
 
 fn state_to_wire(state: InvitationState) -> groups_capnp::InvitationState {
     match state {
@@ -23,7 +22,7 @@ fn state_to_wire(state: InvitationState) -> groups_capnp::InvitationState {
 
 /// The expiry of a request.
 pub(crate) fn read_expires(r: timestamp::Reader<'_>) -> capnp::Result<Timestamp> {
-    from_millis(r.get_unix_millis()).map_err(|e| invalid(e.extra))
+    from_millis(r.get_unix_millis())
 }
 
 /// Write one invitation.

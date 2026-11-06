@@ -68,7 +68,10 @@ impl invitations::Server for InvitationsImpl {
     ) -> Done {
         let p = params.get()?;
         let id = read_id(p.get_id())?;
-        let (person, proved) = (read_text(p.get_person())?, read_text(p.get_proved_address())?);
+        let (person, proved) = (
+            read_text(p.get_person())?,
+            read_text(p.get_proved_address())?,
+        );
         let membership = self
             .invitations
             .accept_proved(id, person, proved, Utc::now())

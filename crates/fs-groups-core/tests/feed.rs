@@ -50,13 +50,19 @@ async fn every_write_is_told_and_the_drop_ends_it() {
     let renamed = r.rename(g.id, "Crew").await.unwrap();
     assert_eq!(seen.take(), [GroupChange::Updated(renamed.envelope)]);
 
-    r.add(g.id, Member::Person(person("ada")), "").await.unwrap();
+    r.add(g.id, Member::Person(person("ada")), "")
+        .await
+        .unwrap();
     assert_eq!(types(&seen.take()), ["created Relationship"]);
 
     let deleted: Vec<ObjectId> = vec![g.id];
     r.delete(g.id).await.unwrap();
     let changes = seen.take();
-    assert_eq!(changes.len(), 2, "the membership and the group: {changes:?}");
+    assert_eq!(
+        changes.len(),
+        2,
+        "the membership and the group: {changes:?}"
+    );
     assert_eq!(changes[1], GroupChange::Deleted(deleted[0]));
 
     drop(subscription);

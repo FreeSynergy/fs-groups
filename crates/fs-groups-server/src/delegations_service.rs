@@ -10,7 +10,9 @@ use fs_groups_core::Delegations;
 use fs_interfaces::groups_capnp::delegations;
 
 use crate::errors::rpc_error;
-use crate::wire::{read_id, read_member, read_right, read_text, write_delegation, write_delegations};
+use crate::wire::{
+    read_id, read_member, read_right, read_text, write_delegation, write_delegations,
+};
 
 pub(crate) struct DelegationsImpl {
     pub(crate) delegations: Arc<dyn Delegations>,

@@ -26,7 +26,7 @@ pub(crate) fn subscribe(
     let (tx, rx) = change_channel();
     let core_subscription = feed.subscribe(Arc::new(ToChannel(tx)));
     forward(rx, core_subscription, listener, |change| async move {
-        Some(notice(change))
+        Ok(Some(notice(change)))
     })
 }
 
