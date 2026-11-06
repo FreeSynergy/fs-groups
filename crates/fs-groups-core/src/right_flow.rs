@@ -5,6 +5,7 @@
 //!
 //! * **Effect** ([`reach`], [`sources`]): on which groups a right placed on a group applies.
 //! * **Recipients** ([`recipients`]): the people of which groups receive a right held by a group.
+//!   [`directory_expresses`] is its edge-level form for a directory.
 //!
 //! Pattern: Strategy (pure) — the repository only asks these functions. [`directory_expresses`] is the
 //! one decision about what a directory can hold. Each group is visited once, so a walk ends on any
@@ -88,29 +89,51 @@ pub fn sources(
 
 // ---- Recipient clause ----------------------------------------------------------------------------
 
-/// The groups whose **direct** members receive a right held by group `holder`: the holder itself.
-/// Nothing is passed on to members of children or parents, whatever anybody set; a person who
-/// should receive it is made a member of the holder or is granted the right. A later, explicit setting
-/// on the holder can widen this; it changes this function only. Empty for an unknown holder.
-pub fn recipients(settings: &BTreeMap<ObjectId, RightFlow>, holder: ObjectId) -> Vec<ObjectId> {
-    if settings.contains_key(&holder) {
-        vec![holder]
-    } else {
-        vec![]
+/// The groups whose **direct** members receive a right held by group `holder`, `holder` first;
+/// empty for an unknown holder.
+///
+/// A holder that does not pass `Up` has itself only: a board that passes down does not reach an
+/// intern in a child, a new parent does not capture the rights of a holder. A holder that passes
+/// `Up` is joined by the children that pass `Up` too, and onward through such children: their
+/// members rise into the holder, as in a directory like Kanidm, where the members of a child get
+/// what the parent holds. **Both ends must agree**, as in [`reach`]. Provisional: the owner may
+/// still split this into two settings.
+pub fn recipients(
+    graph: &Graph,
+    settings: &BTreeMap<ObjectId, RightFlow>,
+    holder: ObjectId,
+) -> Vec<ObjectId> {
+    let Some(&own) = settings.get(&holder) else {
+        return vec![];
+    };
+    let mut out = vec![holder];
+    if own != RightFlow::Up {
+        return out;
     }
+    let mut seen = BTreeSet::from([holder]);
+    let mut queue = VecDeque::from([holder]);
+    while let Some(cur) = queue.pop_front() {
+        for c in graph.children(cur) {
+            if settings.get(c) == Some(&RightFlow::Up) && seen.insert(*c) {
+                out.push(*c);
+                queue.push_back(*c);
+            }
+        }
+    }
+    out
 }
 
 // ---- Directory -----------------------------------------------------------------------------------
 
-/// Whether a directory like Kanidm holds the nested edge `child` in `parent` without giving more
-/// than [`recipients`] does. There, every member of a child is `memberof` the parent, so they get what
-/// the parent holds; here they get it only if the child is among the parent's recipients. With the
-/// safe reading it never is, so every edge is reported. (The directory has no counterpart to the
-/// effect clause, so that clause is not compared.)
+/// Whether the nested edge `child` in `parent` may go to a directory like Kanidm as it is. There,
+/// every member of a child gets what the parent holds, always and only upward. The edge is faithful
+/// when [`recipients`] says the same: the child is among the parent's recipients, which for a direct
+/// edge means both pass `Up`. Anywhere else the mirror writes a flat list instead (the people of the
+/// child are listed in the parent), see `repo/mirror.rs`.
 pub fn directory_expresses(
     settings: &BTreeMap<ObjectId, RightFlow>,
     child: ObjectId,
     parent: ObjectId,
 ) -> bool {
-    recipients(settings, parent).contains(&child)
+    settings.get(&child) == Some(&RightFlow::Up) && settings.get(&parent) == Some(&RightFlow::Up)
 }

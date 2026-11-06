@@ -1,6 +1,7 @@
 //! The mirror side of the repository: the wanted directory state, and the ledger of what we mirrored.
 //!
-//! Pattern: Repository + Adapter — `desired` turns groups and direct people into `DirectoryGroup`s;
+//! Pattern: Repository + Adapter — `desired` turns groups and people into `DirectoryGroup`s (nested
+//! where the rights pass on, a flat list elsewhere);
 //! the ledger is one store object per directory identity, so "only remove what we put there" survives restarts.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -34,25 +35,39 @@ impl Mirror for GroupRepo {
         let groups = self.all_groups().await?;
         let by_id: BTreeMap<_, _> = groups.iter().map(|g| (g.id, g)).collect();
         let graph = crate::graph::Graph::from_groups(&groups);
+        let flows = right_flow::settings(&groups);
+        let mut people: BTreeMap<ObjectId, BTreeSet<String>> = BTreeMap::new();
+        let all = self
+            .memberships(Query::new().with_index("member_kind", "person"))
+            .await?;
+        for m in all {
+            if let Member::Person(p) = m.member {
+                people.entry(m.group).or_default().insert(p);
+            }
+        }
         let mut out = vec![];
         for id in graph.children_first() {
             let Some(g) = by_id.get(&id) else {
                 continue;
             };
-            let members = self
-                .direct(id)
-                .await?
-                .into_iter()
-                .filter_map(|m| match m.member {
-                    Member::Person(p) => Some(p),
-                    Member::Group(_) => None,
-                });
+            // Option B (ADR 0056): a child is nested only where the rights really pass on; for any
+            // other child the people of its whole subtree are listed in this group itself.
+            let (nested, flat): (Vec<&ObjectId>, Vec<&ObjectId>) = graph
+                .children(id)
+                .iter()
+                .partition(|c| right_flow::directory_expresses(&flows, **c, id));
+            let mut members = people.get(&id).cloned().unwrap_or_default();
+            for child in flat {
+                for below in std::iter::once(*child).chain(graph.descendants(*child)) {
+                    members.extend(people.get(&below).into_iter().flatten().cloned());
+                }
+            }
             out.push(
                 DirectoryGroup {
                     id,
                     name: g.name.clone(),
-                    members: members.collect(),
-                    nested: graph.children(id).to_vec(),
+                    members: members.into_iter().collect(),
+                    nested: nested.into_iter().copied().collect(),
                 }
                 .normalised(),
             );

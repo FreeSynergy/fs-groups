@@ -123,6 +123,9 @@ async fn the_mirror_sees_approved_links_only() {
         r.create("p", "t").await.unwrap(),
         r.create("q", "t").await.unwrap(),
     );
+    for g in [&c, &p] {
+        r.set_right_flow(g.id, fs_groups_core::RightFlow::Up).await.unwrap();
+    }
     common::link(&r, c.id, p.id).await;
     r.request_parent(c.id, q.id).await.unwrap();
     let desired = r.desired().await.unwrap();

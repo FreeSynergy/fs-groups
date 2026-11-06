@@ -17,8 +17,8 @@ pub struct SyncReport {
     pub removed: Vec<ObjectId>,
     /// Groups the directory refused, with its message. The next run tries again.
     pub failed: Vec<(ObjectId, String)>,
-    /// Nested edges where the directory gives more than the groups' own rights do (provisional,
-    /// see `right_flow`). Reported, not adapted: what is applied stays as it is.
+    /// Edges written as a flat list, where the directory gives the child's people more than
+    /// `may_do` (provisional, see `right_flow`). Reported, not adapted.
     pub divergences: Vec<Divergence>,
     /// `(parent, child)`: a child the directory does not hold (refused, or not applied), so the
     /// parent was applied without it. The next run tries again.
@@ -32,8 +32,10 @@ pub struct SyncReport {
     pub ledger_error: Option<String>,
 }
 
-/// A nested edge where the directory gives more than the groups' rights do (provisional, see
-/// `right_flow`): there, every member of `group` is a member of `parent` and gets what it holds.
+/// A nested edge that goes to the directory as a flat list (provisional, see `right_flow`): the
+/// people of `group` are listed in `parent`, so there they get what `parent` holds, although
+/// `may_do` does not give it to them. Belonging is kept (nobody loses what `effective` says); the
+/// rights are the part that differs. Edges that are nested in the directory are not listed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Divergence {
     /// The child group.

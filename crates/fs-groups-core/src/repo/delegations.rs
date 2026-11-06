@@ -152,9 +152,9 @@ impl GroupRepo {
                     Member::Person(p) => p == person,
                     Member::Group(h) => {
                         !cyclic.contains(h)
-                            && right_flow::recipients(&flows, *h)
+                            && right_flow::recipients(&graph, &flows, *h)
                                 .iter()
-                                .any(|g| mine.contains(g))
+                                .any(|g| !cyclic.contains(g) && mine.contains(g))
                     }
                 };
                 if held {

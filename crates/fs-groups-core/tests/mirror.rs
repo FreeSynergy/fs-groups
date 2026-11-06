@@ -17,6 +17,10 @@ async fn world() -> (
         r.create("dept", "department").await.unwrap(),
         r.create("team", "team").await.unwrap(),
     );
+    // both pass up: the edge is nested in the directory (option B, ADR 0056)
+    for g in [&dept, &team] {
+        r.set_right_flow(g.id, fs_groups_core::RightFlow::Up).await.unwrap();
+    }
     common::link(&r, team.id, dept.id).await;
     r.add(team.id, Member::Person(person("ada")), "member")
         .await

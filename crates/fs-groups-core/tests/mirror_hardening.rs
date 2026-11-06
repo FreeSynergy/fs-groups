@@ -144,6 +144,9 @@ async fn a_refused_child_is_not_left_nested_in_its_parent() {
         r.create("p", "t").await.unwrap(),
         r.create("c", "t").await.unwrap(),
     );
+    for g in [&p, &c] {
+        r.set_right_flow(g.id, fs_groups_core::RightFlow::Up).await.unwrap();
+    }
     common::link(&r, c.id, p.id).await;
     let dir = FakeDirectory::default();
     *dir.refuse.lock().unwrap() = Some(c.id);

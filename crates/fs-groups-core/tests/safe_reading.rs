@@ -75,6 +75,25 @@ async fn provisional_a_right_does_not_move_to_the_members_of_a_new_parent() {
     assert!(!may(&r, &target, "head").await);
 }
 
+#[tokio::test]
+async fn provisional_members_of_an_up_child_under_an_up_holder_receive_its_rights() {
+    let r = repo().await;
+    let target = mk(&r, "target", RightFlow::None).await;
+    let holder = mk(&r, "holder", RightFlow::Up).await;
+    let child = mk(&r, "child", RightFlow::Up).await;
+    let grandchild = mk(&r, "grandchild", RightFlow::Up).await;
+    common::link(&r, child.id, holder.id).await;
+    common::link(&r, grandchild.id, child.id).await;
+    r.add(grandchild.id, Member::Person(person("ada")), "").await.unwrap();
+    r.grant(target.id, Member::Group(holder.id), Right::Read).await.unwrap();
+    assert!(may(&r, &target, "ada").await, "up along a chain of groups that all pass up");
+    r.set_right_flow(child.id, RightFlow::None).await.unwrap();
+    assert!(!may(&r, &target, "ada").await, "the chain is broken");
+    r.set_right_flow(child.id, RightFlow::Up).await.unwrap();
+    r.set_right_flow(holder.id, RightFlow::Down).await.unwrap();
+    assert!(!may(&r, &target, "ada").await, "the holder does not pass up");
+}
+
 // ---- in doubt, no ----
 
 #[tokio::test]
@@ -258,5 +277,33 @@ fn reach_and_sources_of_an_unknown_group_are_empty() {
     let id = ObjectId::new();
     assert!(reach(&g, &s, id).is_empty());
     assert!(sources(&g, &s, id).is_empty());
-    assert!(fs_groups_core::right_flow::recipients(&s, id).is_empty());
+    assert!(fs_groups_core::right_flow::recipients(&g, &s, id).is_empty());
+}
+
+#[test]
+fn a_nested_edge_is_expressible_exactly_when_the_child_is_a_recipient_of_the_parent() {
+    let mut rng = Lcg(11);
+    let flows = [RightFlow::None, RightFlow::Down, RightFlow::Up];
+    for _ in 0..200 {
+        let n = 2 + rng.next(7);
+        let ids: Vec<_> = (0..n).map(|_| ObjectId::new()).collect();
+        let groups: Vec<_> = (0..n)
+            .map(|i| {
+                let parents = (0..i).filter(|_| rng.next(3) == 0).map(|j| ids[j]).collect();
+                group(ids[i], flows[rng.next(3)], parents)
+            })
+            .collect();
+        let graph = Graph::from_groups(&groups);
+        let settings: BTreeMap<_, _> = groups.iter().map(|g| (g.id, g.right_flow)).collect();
+        for g in &groups {
+            for p in &g.parents {
+                let receives = fs_groups_core::right_flow::recipients(&graph, &settings, *p)
+                    .contains(&g.id);
+                assert_eq!(
+                    fs_groups_core::right_flow::directory_expresses(&settings, g.id, *p),
+                    receives
+                );
+            }
+        }
+    }
 }
