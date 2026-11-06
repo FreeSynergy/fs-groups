@@ -32,7 +32,10 @@ mod unsupported;
 pub use error::{Error, Result};
 pub use graph::Graph;
 pub use invitation_state::Step;
-pub use mirror::{Change, Divergence, Mirror, Scope, SyncReport, Wanted, plan};
+pub use mirror::{
+    AdminRule, Bar, Change, Divergence, Enforced, Mirror, Scope, SyncReport, Verdict, Wanted,
+    enforce, enforce_closure, plan,
+};
 pub use model::{
     Cursor, Delegation, EffectiveMember, Group, Invitation, InvitationState, Member, Membership,
     Page, ParentRequest, RequestState, Right, RightFlow,

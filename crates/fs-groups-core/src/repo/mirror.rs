@@ -14,7 +14,7 @@ use super::consts::{AS2_TYPE, CONTEXT, LEDGER_TYPE};
 use super::envelope::context;
 use super::handle::GroupRepo;
 use crate::error::Result;
-use crate::mirror::{Divergence, Mirror, Wanted, hold_still};
+use crate::mirror::{Divergence, Mirror, Verdict, Wanted};
 use crate::right_flow;
 use crate::traits::DirectoryGroup;
 
@@ -46,53 +46,21 @@ impl Mirror for GroupRepo {
         Ok(self.directory_state().await?.looped)
     }
 
-    async fn left_out(&self) -> Result<Vec<(ObjectId, Vec<String>)>> {
-        Ok(self.directory_state().await?.left_out)
-    }
-
     async fn stored(&self, id: ObjectId) -> Result<bool> {
         Ok(self.load(id).await?.is_some())
     }
 
-    /// While something that touches the group cannot be read, keep what the directory holds. In an
-    /// administrative group the checker is asked about what is there: agents and unknowns go, and an
-    /// old nested edge stays only if everybody in the child's closure in the directory is known to be
-    /// a human.
-    async fn settle(
-        &self,
-        group: DirectoryGroup,
-        current: &BTreeMap<ObjectId, DirectoryGroup>,
-        wanted: &Wanted,
-    ) -> Result<(DirectoryGroup, Vec<String>)> {
-        if !wanted.uncertain.covers(group.id) || !current.contains_key(&group.id) {
-            return Ok((group, vec![]));
+    async fn verdicts(&self, people: &BTreeSet<String>) -> Result<BTreeMap<String, Verdict>> {
+        let mut out = BTreeMap::new();
+        for p in people {
+            let v = match self.ai_answer(p).await? {
+                Some(true) => Verdict::Agent,
+                Some(false) => Verdict::Human,
+                None => Verdict::Unknown,
+            };
+            out.insert(p.clone(), v);
         }
-        let (mut held, mut dropped) = (hold_still(group.clone(), current), vec![]);
-        if wanted.admin.covers(group.id) {
-            let mut members = vec![];
-            for p in std::mem::take(&mut held.members) {
-                if self.is_known_human(&p).await? {
-                    members.push(p);
-                } else {
-                    dropped.push(p);
-                }
-            }
-            held.members = members;
-            let mut nested = vec![];
-            for c in std::mem::take(&mut held.nested) {
-                let mut clean = true;
-                if !group.nested.contains(&c) {
-                    for p in closure_in(current, c) {
-                        clean &= self.is_known_human(&p).await?;
-                    }
-                }
-                if clean {
-                    nested.push(c);
-                }
-            }
-            held.nested = nested;
-        }
-        Ok((held, dropped))
+        Ok(out)
     }
 
     async fn divergences(&self) -> Result<Vec<Divergence>> {
@@ -140,16 +108,4 @@ impl Mirror for GroupRepo {
         obj.envelope.updated = chrono::Utc::now();
         w.put(obj).await
     }
-}
-
-/// Everybody the directory lists in `id` and in what is nested below it.
-fn closure_in(current: &BTreeMap<ObjectId, DirectoryGroup>, id: ObjectId) -> BTreeSet<String> {
-    let (mut seen, mut todo, mut out) = (BTreeSet::new(), vec![id], BTreeSet::new());
-    while let Some(cur) = todo.pop() {
-        if let Some(g) = current.get(&cur).filter(|_| seen.insert(cur)) {
-            out.extend(g.members.iter().cloned());
-            todo.extend(g.nested.iter().copied());
-        }
-    }
-    out
 }

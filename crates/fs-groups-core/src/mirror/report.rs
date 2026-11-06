@@ -34,6 +34,9 @@ pub struct SyncReport {
     /// `(group, people)` left out of a group that carries an administrative right (`Manage`, or a
     /// member with an admin role) because they are agents or not known to be human (ADR 0056).
     pub left_out: Vec<(ObjectId, Vec<String>)>,
+    /// `(group, people)` in a group that may be administrative (an unreadable object could not be
+    /// placed) whom the host could not vouch for. They stay; known agents are out.
+    pub unchecked: Vec<(ObjectId, Vec<String>)>,
     /// The ledger could not be tidied up after the run (the intent written before the run stands, so
     /// nothing is lost; ids of removed groups stay in it until the next run).
     pub ledger_error: Option<String>,

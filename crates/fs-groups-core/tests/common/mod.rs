@@ -326,7 +326,10 @@ impl GroupDirectory for Recording {
     async fn apply(&self, g: &DirectoryGroup) -> Result<()> {
         let refused = self.refuse.lock().unwrap().contains(&g.id);
         if !refused {
-            self.groups.lock().unwrap().insert(g.id, g.clone().normalised());
+            self.groups
+                .lock()
+                .unwrap()
+                .insert(g.id, g.clone().normalised());
         }
         self.snapshot();
         if refused {

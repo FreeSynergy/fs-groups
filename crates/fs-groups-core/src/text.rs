@@ -5,14 +5,14 @@
 //! role cannot pass as another role. A role id that is not in the role registry stays an opaque
 //! string; only a variant of a configured admin role is treated as that role.
 
+use icu_properties::props::{DefaultIgnorableCodePoint, GeneralCategory, GeneralCategoryGroup};
+use icu_properties::{CodePointMapData, CodePointSetData};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::error::{Error, Result};
 
 /// Punctuation a role id may contain besides ASCII letters and digits.
 const ROLE_PUNCT: &str = "-_.:/#@+~%=";
-/// Punctuation an identity may contain besides letters and digits (the ASCII part of an IRI).
-const IDENTITY_PUNCT: &str = "-._~:/?#[]@!$&'()*+,;=%";
 
 fn refuse(what: &str, c: char) -> Error {
     Error::Conflict(format!(
@@ -34,18 +34,41 @@ pub(crate) fn check_role(what: &str, s: &str) -> Result<()> {
     }
 }
 
-/// An identity (an IRI, or an e-mail address) is made of letters and digits of any script and the
-/// ASCII punctuation of an IRI: no whitespace, no control, no format or invisible character, since
-/// none of those is a letter, a digit or that punctuation. (Look-alike letters from other scripts
-/// are not told apart; that is for the host's identity rules.)
-pub(crate) fn check_person(what: &str, s: &str) -> Result<()> {
-    match s
-        .chars()
-        .find(|c| !(c.is_alphanumeric() || IDENTITY_PUNCT.contains(*c)))
-    {
-        Some(c) => Err(refuse(what, c)),
-        None => Ok(()),
+/// Punctuation an identity may contain besides letters, digits and marks: the ASCII punctuation of an
+/// IRI and of an e-mail address (the caret, braces, bar, backtick and quotes of an e-mail local part
+/// are allowed).
+const IDENTITY_PUNCT: &str = "-._~:/?#[]@!$&'()*+,;=%^{|}`\"";
+
+/// An identity (an IRI, or an e-mail address), checked and in Unicode normal form C, so that a
+/// decomposed and a composed spelling of the same name are one person.
+///
+/// Allowed: letters and digits of any script, combining marks (a virama, a diaeresis), the ASCII
+/// punctuation above, and a zero width (non-)joiner between letters or after a mark, where scripts
+/// need it (Persian, Devanagari). Refused: whitespace, controls, every other invisible or format
+/// character (default ignorable code points such as the Hangul fillers, bidi controls, variation
+/// selectors, tags), a joiner at an end or between non-letters, and unassigned code points. Look-alike
+/// letters of other scripts are not told apart; that is for the host's identity rules.
+pub(crate) fn person(what: &str, s: &str) -> Result<String> {
+    let s: String = s.trim().nfc().collect();
+    let ignorable = CodePointSetData::new::<DefaultIgnorableCodePoint>();
+    let categories = CodePointMapData::<GeneralCategory>::new();
+    let chars: Vec<char> = s.chars().collect();
+    let is_mark = |c: char| GeneralCategoryGroup::Mark.contains(categories.get(c));
+    for (i, c) in chars.iter().copied().enumerate() {
+        let joiner = c == '\u{200c}' || c == '\u{200d}';
+        let ok = if joiner {
+            let before = i > 0 && (chars[i - 1].is_alphabetic() || is_mark(chars[i - 1]));
+            let after = chars.get(i + 1).is_some_and(|n| n.is_alphabetic());
+            before && after
+        } else {
+            !ignorable.contains(c)
+                && (c.is_alphanumeric() || is_mark(c) || IDENTITY_PUNCT.contains(c))
+        };
+        if !ok {
+            return Err(refuse(what, c));
+        }
     }
+    Ok(s)
 }
 
 /// The folded form of a role id: trimmed, compatibility-normalised, case folded.

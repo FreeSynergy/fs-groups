@@ -1,136 +1,173 @@
 //! The wanted state of a directory, worked out from the groups in one pass.
 //!
 //! Pattern: Specification over the in-memory graph — option B (ADR 0056, provisional): a child is
-//! nested only where `right_flow::directory_nests` says so and nothing forbids it, every other child
-//! is listed flat in the parent. Nothing forbids it unless the parent carries an administrative right
-//! and the child's directory closure holds somebody who is an agent or not known to be a human.
-//! Such people are never written into a group that carries an administrative right, however they
-//! would get there (listed, flat from a child, nested through a child), and are named in the result.
+//! nested only where `right_flow::directory_nests` says so, every other child is listed flat in the
+//! parent. Nothing here knows the rule about agents; it only finds out **which groups are
+//! administrative and what cannot be read**, with every unknown counted against the group (fail
+//! closed). `mirror::enforce` applies the rule to the final plan.
+//!
+//! Everything in the context is read once and sorted by type, so an object whose type was changed, a
+//! membership whose index and content disagree, or a group with a corrupt parent entry is noticed
+//! and reported instead of silently missing.
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use fs_store::{ObjectId, Query};
+use fs_store::{ObjectId, Order, Query, StoredObject};
 
 use super::codec;
-use super::consts::{CONTEXT, DELEGATION_TYPE, MEMBERSHIP_TYPE};
+use super::consts::{
+    CONTEXT, DELEGATION_TYPE, GROUP_TYPE, INVITATION_TYPE, LEDGER_TYPE, MEMBERSHIP_TYPE,
+    PARENT_REQUEST_TYPE,
+};
 use super::handle::GroupRepo;
 use crate::error::Result;
 use crate::graph::Graph;
-use crate::mirror::{Scope, Wanted};
-use crate::model::{Member, Right};
+use crate::mirror::{AdminRule, Scope, Wanted};
+use crate::model::{Group, Member, Right, RightFlow};
 use crate::right_flow;
 use crate::traits::DirectoryGroup;
-use fs_store::StoredObject;
+
+type People = BTreeMap<ObjectId, BTreeSet<(String, String)>>;
+
+/// What cannot be read, and which groups it touches.
+#[derive(Default)]
+struct Doubt {
+    /// Stored objects that cannot be read.
+    unreadable: Vec<ObjectId>,
+    /// Groups whose wanted list may be short (the group, and the groups above it), or all.
+    uncertain: Scope,
+    /// Groups that count as administrative because of an object that cannot be read, or all.
+    admin: Scope,
+}
+
+impl Doubt {
+    /// The groups above `group` (and it) list its people: they may be short.
+    fn above(&mut self, graph: &Graph, group: ObjectId) {
+        self.uncertain.groups.insert(group);
+        self.uncertain.groups.extend(graph.ancestors(group));
+    }
+
+    /// An object that cannot be read touches `group` if its index still says which; then the group
+    /// counts as administrative. If not, it could not be placed at all.
+    fn touches(&mut self, graph: &Graph, id: ObjectId, group: Option<ObjectId>) {
+        self.unreadable.push(id);
+        if let Some(group) = group {
+            self.above(graph, group);
+            self.admin.groups.insert(group);
+        } else {
+            self.uncertain.all = true;
+            self.admin.all = true;
+        }
+    }
+}
+
+fn index_of<'a>(o: &'a StoredObject, key: &str) -> Option<&'a str> {
+    o.index.get(key)?.first().map(String::as_str)
+}
+
+fn id_in(o: &StoredObject, key: &str) -> Option<ObjectId> {
+    index_of(o, key)?.parse().ok()
+}
+
+/// A delegation that cannot be read: could its right be `Manage`, and which group would hold it?
+/// The index and the content are both looked at; any doubt counts against us (fail closed).
+fn doubtful_delegation(o: &StoredObject, doubt: &mut Doubt, admin: &mut BTreeSet<ObjectId>) {
+    let right = |s: Option<&str>| s.and_then(Right::parse);
+    let content = |k: &str| o.content.get(k).and_then(|v| v.as_str());
+    doubt.unreadable.push(o.envelope.id);
+    let harmless = |r: Option<Right>| r.is_some_and(|r| r != Right::Manage);
+    if harmless(right(index_of(o, "right"))) && harmless(right(content("fs:right"))) {
+        return; // whatever else is wrong with it, it is no admin right
+    }
+    let mut holders: Vec<ObjectId> = vec![];
+    holders.extend(id_in(o, "holder").filter(|_| index_of(o, "holder_kind") == Some("group")));
+    holders.extend(content("subject").and_then(|s| s.parse::<ObjectId>().ok()));
+    if holders.is_empty() {
+        if index_of(o, "holder_kind") != Some("person") {
+            doubt.admin.all = true; // the holder cannot be told
+        }
+        return;
+    }
+    admin.extend(holders);
+}
 
 impl GroupRepo {
-    /// The groups that carry an administrative right: they hold `Manage` on something, or a member
-    /// has a configured admin role in them. **Fail closed:** a delegation that cannot be read, and
-    /// whose right may be `Manage`, makes its holder group administrative (all groups, if the holder
-    /// cannot be told); so does a membership that cannot be read, for its group.
-    async fn admin_groups(
-        &self,
-        people: &People,
-        extra: &mut Scope,
-        unreadable: &mut Vec<ObjectId>,
-    ) -> Result<BTreeSet<ObjectId>> {
-        let q = Query::new().of_type(DELEGATION_TYPE).in_context(CONTEXT);
-        let mut out = BTreeSet::new();
-        for o in self.reads.query(&q).await? {
-            if let Some(d) = codec::delegation(&o) {
-                if let (Right::Manage, Member::Group(h)) = (d.right, d.holder) {
-                    out.insert(h);
-                }
-                continue;
-            }
-            unreadable.push(o.envelope.id);
-            let right = index_of(&o, "right").and_then(Right::parse);
-            if right.is_some_and(|r| r != Right::Manage) {
-                continue; // whatever else is wrong with it, it is no admin right
-            }
-            match (index_of(&o, "holder_kind"), id_in(&o, "holder")) {
-                (Some("group"), Some(h)) => {
-                    extra.groups.insert(h);
-                }
-                (Some("person"), _) => {}
-                _ => extra.all = true,
-            }
-        }
-        for (group, held) in people {
-            if held.iter().any(|(_, role)| self.is_admin_role(role)) {
-                out.insert(*group);
-            }
-        }
-        Ok(out)
-    }
-
-    /// Every membership, so that one that cannot be read is noticed: who is in which group with which
-    /// role, and what an unreadable one touches.
-    async fn read_people(
-        &self,
-        graph: &Graph,
-        scopes: &mut Scopes,
-        unreadable: &mut Vec<ObjectId>,
-    ) -> Result<People> {
-        let q = Query::new().of_type(MEMBERSHIP_TYPE).in_context(CONTEXT);
-        let mut people: People = BTreeMap::new();
-        for o in self.reads.query(&q).await? {
-            if let Some(m) = codec::membership(&o) {
-                if let Member::Person(p) = m.member {
-                    people.entry(m.group).or_default().insert((p, m.role));
-                }
-            } else {
-                unreadable.push(o.envelope.id);
-                if let Some(g) = id_in(&o, "group") {
-                    scopes.touch(graph, g);
-                    scopes.admin.groups.insert(g);
-                } else {
-                    scopes.uncertain.all = true;
-                    scopes.admin.all = true;
-                }
-            }
-        }
-        Ok(people)
-    }
-
     pub(super) async fn directory_state(&self) -> Result<Wanted> {
-        let (groups, bad_groups) = self.read_groups().await?;
+        let found = self
+            .reads
+            .query(&Query::new().in_context(CONTEXT).ordered(Order::NameAsc))
+            .await?;
+        let (mut groups, mut bad_groups) = (vec![], vec![]);
+        let (mut memberships, mut delegations, mut strays) = (vec![], vec![], vec![]);
+        for o in found {
+            match o.envelope.object_type.as_str() {
+                GROUP_TYPE => match Group::from_content(o.envelope.id, &o.content) {
+                    Some(g) => groups.push(g),
+                    None => bad_groups.push((o.envelope.id, Group::parents_in(&o.content))),
+                },
+                MEMBERSHIP_TYPE => memberships.push(o),
+                DELEGATION_TYPE => delegations.push(o),
+                INVITATION_TYPE | PARENT_REQUEST_TYPE | LEDGER_TYPE => {}
+                _ => strays.push(o),
+            }
+        }
         let by_id: BTreeMap<_, _> = groups.iter().map(|g| (g.id, g)).collect();
         let graph = Graph::from_groups(&groups);
         let looped = graph.cyclic_nodes();
-        let (mut unreadable, mut scopes) = (vec![], Scopes::default());
+        let mut doubt = Doubt::default();
+        let bad_ids: BTreeSet<_> = bad_groups.iter().map(|(id, _)| *id).collect();
         // A group that cannot be read: what is above it loses what comes from below it.
-        for u in bad_groups {
-            unreadable.push(u.id);
-            scopes.uncertain.groups.insert(u.id);
-            match u.parents {
-                Some(parents) => parents.into_iter().for_each(|p| scopes.touch(&graph, p)),
-                None => scopes.uncertain.all = true,
+        for (id, parents) in bad_groups {
+            doubt.unreadable.push(id);
+            doubt.uncertain.groups.insert(id);
+            match parents {
+                Some(ps) => ps.into_iter().for_each(|p| doubt.above(&graph, p)),
+                None => doubt.uncertain.all = true,
             }
         }
-        let people = self
-            .read_people(&graph, &mut scopes, &mut unreadable)
-            .await?;
-        let mut admin = self
-            .admin_groups(&people, &mut scopes.admin, &mut unreadable)
-            .await?;
-        admin.extend(scopes.admin.groups.iter().copied());
-        if scopes.admin.all {
-            admin.extend(by_id.keys().copied());
+        // A parent that is nowhere is reported, and any group may be missing this child's people.
+        for g in &groups {
+            if g.parents
+                .iter()
+                .any(|p| !by_id.contains_key(p) && !bad_ids.contains(p))
+            {
+                // which group it was meant to be in cannot be told
+                doubt.unreadable.push(g.id);
+                doubt.uncertain.all = true;
+            }
         }
-        let admin_scope = Scope {
-            all: scopes.admin.all,
-            groups: admin,
-        };
-        // who is not known to be a human; only asked when an administrative group exists
-        let mut bad = BTreeSet::new();
-        if !admin_scope.is_empty() {
-            let everyone: BTreeSet<_> = people.values().flatten().map(|(p, _)| p.clone()).collect();
-            for p in everyone {
-                if !self.is_known_human(&p).await? {
-                    bad.insert(p);
+        let mut people: People = BTreeMap::new();
+        for o in &memberships {
+            match codec::membership(o) {
+                Some(m) => match m.member {
+                    Member::Person(p) => {
+                        people.entry(m.group).or_default().insert((p, m.role));
+                    }
+                    Member::Group(_) => doubt.touches(&graph, o.envelope.id, id_in(o, "group")),
+                },
+                None => doubt.touches(&graph, o.envelope.id, id_in(o, "group")),
+            }
+        }
+        let mut strict: BTreeSet<ObjectId> = BTreeSet::new();
+        for o in &delegations {
+            match codec::delegation(o) {
+                Some(d) => {
+                    if let (Right::Manage, Member::Group(h)) = (d.right, d.holder) {
+                        strict.insert(h);
+                    }
                 }
+                None => doubtful_delegation(o, &mut doubt, &mut strict),
             }
         }
+        for o in &strays {
+            doubt.touches(&graph, o.envelope.id, id_in(o, "group"));
+        }
+        for (group, roles) in &people {
+            if roles.iter().any(|(_, role)| self.is_admin_role(role)) {
+                strict.insert(*group);
+            }
+        }
+        strict.extend(doubt.admin.groups.iter().copied());
         let flows = right_flow::settings(&groups);
         let build = Build {
             by_id: &by_id,
@@ -138,50 +175,30 @@ impl GroupRepo {
             flows: &flows,
             looped: &looped,
             people: &people,
-            admin: &admin_scope,
-            bad: &bad,
         };
-        let (out, left_out) = build.groups();
+        let mut unreadable = std::mem::take(&mut doubt.unreadable);
         unreadable.sort();
         unreadable.dedup();
         Ok(Wanted {
-            groups: out,
-            left_out,
+            groups: build.groups(),
             looped: looped.into_iter().collect(),
             unreadable,
-            uncertain: scopes.uncertain,
-            admin: admin_scope,
+            uncertain: doubt.uncertain,
+            admin: AdminRule {
+                strict,
+                lenient_all: doubt.admin.all,
+            },
         })
-    }
-}
-
-type People = BTreeMap<ObjectId, BTreeSet<(String, String)>>;
-
-/// What unreadable objects touch: the groups whose wanted list may be short, and the groups that
-/// count as administrative because of an object that cannot be read.
-#[derive(Default)]
-struct Scopes {
-    uncertain: Scope,
-    admin: Scope,
-}
-
-impl Scopes {
-    /// `g` and everything above it: they list the people of `g`.
-    fn touch(&mut self, graph: &Graph, g: ObjectId) {
-        self.uncertain.groups.insert(g);
-        self.uncertain.groups.extend(graph.ancestors(g));
     }
 }
 
 /// The inputs of the pass that builds the directory groups.
 struct Build<'a> {
-    by_id: &'a BTreeMap<ObjectId, &'a crate::model::Group>,
+    by_id: &'a BTreeMap<ObjectId, &'a Group>,
     graph: &'a Graph,
-    flows: &'a BTreeMap<ObjectId, crate::model::RightFlow>,
+    flows: &'a BTreeMap<ObjectId, RightFlow>,
     looped: &'a BTreeSet<ObjectId>,
     people: &'a People,
-    admin: &'a Scope,
-    bad: &'a BTreeSet<String>,
 }
 
 impl Build<'_> {
@@ -192,26 +209,21 @@ impl Build<'_> {
             .unwrap_or_default()
     }
 
-    /// Children first: the groups with their nested children, and who was left out where.
-    fn groups(&self) -> (Vec<DirectoryGroup>, Vec<(ObjectId, Vec<String>)>) {
-        let mut closure: BTreeMap<ObjectId, BTreeSet<String>> = BTreeMap::new();
-        let (mut out, mut left_out) = (vec![], vec![]);
+    /// Children first: each group with the children nested in it, and the people of the others
+    /// (their whole subtrees) listed in it.
+    fn groups(&self) -> Vec<DirectoryGroup> {
+        let mut out = vec![];
         for id in self.graph.children_first() {
             let Some(g) = self.by_id.get(&id) else {
                 continue;
             };
-            let is_admin = self.admin.covers(id);
             let mut members = self.direct(&id);
             let mut nested = vec![];
             for child in self.graph.children(id) {
                 let edge_ok = right_flow::directory_nests(self.flows, *child, id)
                     && !self.looped.contains(child)
                     && !self.looped.contains(&id);
-                let clean = !is_admin
-                    || closure
-                        .get(child)
-                        .is_some_and(|c| c.iter().all(|p| !self.bad.contains(p)));
-                if edge_ok && clean && closure.contains_key(child) {
+                if edge_ok {
                     nested.push(*child);
                 } else {
                     for below in std::iter::once(*child).chain(self.graph.descendants(*child)) {
@@ -219,22 +231,6 @@ impl Build<'_> {
                     }
                 }
             }
-            if is_admin {
-                let gone: Vec<_> = members
-                    .iter()
-                    .filter(|p| self.bad.contains(*p))
-                    .cloned()
-                    .collect();
-                members.retain(|p| !self.bad.contains(p));
-                if !gone.is_empty() {
-                    left_out.push((id, gone));
-                }
-            }
-            let mut reach = members.clone();
-            for c in &nested {
-                reach.extend(closure.get(c).into_iter().flatten().cloned());
-            }
-            closure.insert(id, reach);
             out.push(
                 DirectoryGroup {
                     id,
@@ -245,14 +241,6 @@ impl Build<'_> {
                 .normalised(),
             );
         }
-        (out, left_out)
+        out
     }
-}
-
-fn index_of<'a>(o: &'a StoredObject, key: &str) -> Option<&'a str> {
-    o.index.get(key)?.first().map(String::as_str)
-}
-
-fn id_in(o: &StoredObject, key: &str) -> Option<ObjectId> {
-    index_of(o, key)?.parse().ok()
 }

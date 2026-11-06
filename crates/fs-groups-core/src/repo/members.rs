@@ -24,13 +24,11 @@ impl GroupRepo {
                 "a group joins a group with request_parent, not as a member".into(),
             ));
         };
-        let person = person.trim();
-        if person.is_empty() {
+        if person.trim().is_empty() {
             return Err(Error::Conflict("a member needs an IRI".into()));
         }
-        text::check_person("person", person)?;
         text::check_role("role", role.trim())?;
-        let member = Member::Person(person.into());
+        let member = Member::Person(text::person("person", person)?);
         self.writer()
             .await
             .add_member(group, member, role.trim())

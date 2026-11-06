@@ -42,15 +42,21 @@ impl Group {
         })
     }
 
-    /// Read a group back from its AS2 content. `None` if it is not a well-formed group.
-    pub fn from_content(id: ObjectId, content: &Value) -> Option<Group> {
-        let text = |k: &str| content.get(k)?.as_str().map(str::to_string);
-        let parents = content
+    /// The parents named in AS2 content: `None` if the member is missing or any entry is not a group id
+    /// (a corrupt entry must not be dropped quietly: the group is then unreadable).
+    pub fn parents_in(content: &Value) -> Option<Vec<ObjectId>> {
+        content
             .get("fs:parents")?
             .as_array()?
             .iter()
-            .filter_map(|v| v.as_str()?.parse().ok())
-            .collect();
+            .map(|v| v.as_str()?.parse().ok())
+            .collect()
+    }
+
+    /// Read a group back from its AS2 content. `None` if it is not a well-formed group.
+    pub fn from_content(id: ObjectId, content: &Value) -> Option<Group> {
+        let text = |k: &str| content.get(k)?.as_str().map(str::to_string);
+        let parents = Self::parents_in(content)?;
         Some(Group {
             id,
             iri: text("id")?,

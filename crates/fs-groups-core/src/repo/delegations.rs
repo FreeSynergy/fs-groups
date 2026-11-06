@@ -28,10 +28,7 @@ impl GroupRepo {
             Member::Person(p) if p.trim().is_empty() => {
                 return Err(Error::Conflict("a holder needs an IRI".into()));
             }
-            Member::Person(p) => {
-                text::check_person("holder", p.trim())?;
-                Member::Person(p.trim().into())
-            }
+            Member::Person(p) => Member::Person(text::person("holder", &p)?),
             group_holder @ Member::Group(_) => group_holder,
         };
         let w = self.writer().await;
@@ -125,8 +122,8 @@ impl GroupRepo {
     /// that is gone, an object that cannot be read, an unknown setting (read as `none`): never a yes.
     /// A failing read is an error, not a no. The graph is loaded once per call.
     pub async fn may_do(&self, group: ObjectId, person: &str, right: Right) -> Result<bool> {
-        let person = person.trim();
-        text::check_person("person", person)?;
+        let person = text::person("person", person)?;
+        let person = person.as_str();
         let groups = self.all_groups().await?;
         let graph = Graph::from_groups(&groups);
         if !graph.contains(group) {

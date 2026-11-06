@@ -113,22 +113,6 @@ pub(super) async fn current_state(
     Ok((current, gone))
 }
 
-/// The people left out of each group, from the source and from the groups that were held still.
-pub(super) fn merge_left_out(
-    from_source: &[(ObjectId, Vec<String>)],
-    dropped: Vec<(ObjectId, Vec<String>)>,
-) -> Vec<(ObjectId, Vec<String>)> {
-    let mut merged: BTreeMap<ObjectId, BTreeSet<String>> = BTreeMap::new();
-    for (id, people) in from_source.iter().cloned().chain(dropped) {
-        merged.entry(id).or_default().extend(people);
-    }
-    merged
-        .into_iter()
-        .filter(|(_, people)| !people.is_empty())
-        .map(|(id, people)| (id, people.into_iter().collect()))
-        .collect()
-}
-
 /// Groups to write, each with whether it is new.
 pub(super) type Writes = Vec<(DirectoryGroup, bool)>;
 
@@ -152,4 +136,79 @@ pub(super) fn split_steps(
         }
     }
     (takes, gives, removals)
+}
+
+/// Whether writing `wanted` over `now` adds a person or a nested edge.
+fn adds_anyone(now: Option<&DirectoryGroup>, wanted: &DirectoryGroup) -> bool {
+    let Some(now) = now else {
+        return !wanted.members.is_empty() || !wanted.nested.is_empty();
+    };
+    wanted.members.iter().any(|m| !now.members.contains(m))
+        || wanted.nested.iter().any(|c| !now.nested.contains(c))
+}
+
+/// How far below a root each group is in the directory now (longest path), so that parents can be
+/// written before their children. Bounded, so a loop in the directory cannot hang it.
+fn depth(there: &BTreeMap<ObjectId, DirectoryGroup>) -> BTreeMap<ObjectId, usize> {
+    let mut depth: BTreeMap<_, _> = there.keys().map(|id| (*id, 0usize)).collect();
+    for _ in 0..there.len() {
+        let mut moved = false;
+        for (id, g) in there {
+            let here = depth[id];
+            for c in &g.nested {
+                if let Some(d) = depth.get_mut(c).filter(|d| **d <= here) {
+                    *d = here + 1;
+                    moved = true;
+                }
+            }
+        }
+        if !moved {
+            break;
+        }
+    }
+    depth
+}
+
+/// Write the groups in an order that keeps the rule about agents true at every step.
+///
+/// What takes away goes first, parents before children (by the nesting the directory has now); what
+/// adds follows, children before parents. A write that adds anybody is **held back** when a group
+/// above it in the directory could not be updated (its edge to this group stays), and when it adds a
+/// nested edge to a group that is not yet in its final state. A group that is held back or refused
+/// blocks the adds below it in turn.
+pub(super) async fn write_all(
+    directory: &dyn GroupDirectory,
+    mut takes: Writes,
+    gives: Writes,
+    there: &BTreeMap<ObjectId, DirectoryGroup>,
+    present: &mut BTreeSet<ObjectId>,
+    report: &mut SyncReport,
+) {
+    let rank = depth(there);
+    takes.sort_by_key(|(g, _)| rank.get(&g.id).copied());
+    let mut settled: BTreeSet<ObjectId> = report.unchanged.iter().copied().collect();
+    let mut blocked = BTreeSet::new();
+    for (g, new) in takes.into_iter().chain(gives) {
+        let id = g.id;
+        let now = there.get(&id);
+        let new_children: Vec<_> = g
+            .nested
+            .iter()
+            .filter(|c| !now.is_some_and(|n| n.nested.contains(c)))
+            .collect();
+        let early = new_children
+            .iter()
+            .any(|c| present.contains(c) && !settled.contains(c));
+        if adds_anyone(now, &g) && (blocked.contains(&id) || early) {
+            let why = "held back: a group above it that nests it, or a group it is to nest, is not in its final state";
+            report.failed.push((id, why.to_string()));
+            blocked.insert(id);
+            blocked.extend(below(there, id));
+        } else if put(directory, g, new, present, report).await {
+            settled.insert(id);
+        } else {
+            blocked.insert(id);
+            blocked.extend(below(there, id));
+        }
+    }
 }

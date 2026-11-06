@@ -22,8 +22,8 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 | Mirroring: `Mirror::sync_to(&dyn GroupDirectory)` (Template method), idempotent, heals manual changes, removes only ids it mirrored (ledger in the store) | done, tested against an in-memory fake directory |
 | Right flow (ADR 0055 point 6): `Group.right_flow` (`None` default, `Down`, `Up`), `set_right_flow`, `fs:rightFlow` in the AS2 content (absent = `None`); **meaning provisional** | done |
 | Mirror option B (ADR 0056): nested only where child and parent both pass `Up` and nothing forbids it, else a flat list (the child's whole subtree); old nested form healed; `divergences` = **every** edge (the nested ones too) | done, **provisional** |
-| Agents never admin: `AiMarking` (injected), admin roles by configuration (folded), installer by configuration, text with invisible characters refused; no answer = refuse; also in the mirror (administrative groups list no agent or unknown) | done, **provisional, no authentication** |
-| Mirror hardening: ledger written before the directory (intent), tidied only when it changed; keyed by `directory_id`; where an unreadable object touches a group nobody is taken out of it (an agent in an administrative group excepted), elsewhere revocations go on, and the run is not quiet; an unreadable delegation or membership makes the group it touches count as administrative (fail closed); loops are never nested; a parent is applied only with the children the directory holds; one unmapped person does not block the group | done |
+| Agents never admin: `AiMarking` (injected), admin roles by configuration (folded, ASCII), installer by configuration, identities in NFC and checked by shape; no answer = refuse; in the mirror one invariant on the final plan (`enforce`), checked on every prefix of the writes | done, **provisional, no authentication** |
+| Mirror hardening: ledger written before the directory (intent), tidied only when it changed; keyed by `directory_id`; everything is read once and sorted by type, index and content must agree, anything unreadable fails closed and is reported (not quiet); revocations elsewhere go on; loops are never nested; a parent is applied only with the children the directory holds; one unmapped person does not block the group | done |
 | One write path (`Writer` holds the lock), process-wide lock per store handle | done; **single-writer limit, see Decisions** |
 | `group.subscribe`, capnp-rpc server | **not built**; `capabilities()` says "not built yet; it is possible" |
 | Tests | see the final count in the commit message (`tests/*.rs` by feature, real in-memory `TursoStore`, forced interleavings with a slow backend) |
@@ -44,7 +44,8 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 | `repo/handle.rs` `Writer` | Unit of work (lock guard) | the only way to put or delete an object; holds the write lock |
 | `repo/nesting.rs`, `repo/parent_requests.rs` | Specification + State | the no-cycle rule on the in-memory graph; request, approve, decline |
 | `repo/provide.rs` | Adapter | trait methods call the inherent ones |
-| `mirror/sync.rs` | Template method | fixed flow: remember intent, read, plan, apply, remove, tidy the ledger |
+| `mirror/sync.rs`, `mirror/steps.rs` | Template method | fixed flow: remember intent, read, plan, enforce, write in order, remove, tidy the ledger |
+| `mirror/enforce.rs` | Specification (pure) | the one place that knows the rule about agents, applied to the final plan |
 | `right_flow.rs` | Strategy (pure) | the one place that says what up and down mean (provisional): effect clause (`reach`, `sources`), recipient clause (`recipients`), `directory_expresses` |
 | `mirror/plan.rs` | Specification (pure) | create / update / keep / remove decided without I/O |
 | `repo/mirror.rs` | Repository | wanted state + the ledger of mirrored ids |
@@ -120,9 +121,12 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
   **Spelling and shape.** Role ids and the configured admin roles are compared folded (trimmed, case folded), so `" Owner "` and `OWNER`
   are the admin role. **Role ids are ASCII only** (letters, digits and `- _ . : / # @ + ~ % =`): that refuses control, invisible and
   look-alike characters by shape (a Cyrillic `о` in `оwner`), the smaller of the two options, at the price that a role id with an
-  umlaut is refused here. Persons, invitees, holders and the installer are made of letters and digits of any script and the ASCII
-  punctuation of an IRI: no whitespace, control or format character (look-alike letters of other scripts are not told apart; that
-  is for the host's identity rules). Configuration that breaks this, an empty admin role, or an empty or padded installer is
+  umlaut is refused here. Persons, invitees, holders and the installer are checked in Unicode normal form C (a decomposed and a composed spelling are one
+  person) and are made of letters and digits of any script, combining marks (a virama, a diaeresis), the ASCII punctuation of an
+  IRI or an e-mail local part (including `^ { | }`, backtick and quotes), and a zero width (non-)joiner between letters or after a
+  mark (Persian, Devanagari). **Still refused:** whitespace, controls, every other invisible or format character (all default
+  ignorable code points such as the Hangul fillers, bidi controls, variation selectors, tags), a joiner at an end or between
+  non-letters, and unassigned code points; look-alike letters of other scripts are not told apart (the host's identity rules). Configuration that breaks this, an empty admin role, or an empty or padded installer is
   refused. A role id that is not an admin role stays an opaque string. **Without `with_admin_roles` no role counts as admin, so an
   agent can be added with the role `owner`: naming the admin roles is the host's duty.** The person is asked of the host with
   scheme and host in lower case and nothing else changed (the user part, path, query, fragment and a trailing slash are different
@@ -132,17 +136,40 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
   **In force.** `Membership::in_force` and `Delegation::in_force` are `false` for an admin role or `Manage` held by a person who
   is (now) an agent or not known to be human: the entry stays, but counts for nothing. An admin *role* alone grants no right
   (`may_do` stays false): it only bars agents; appoint an admin by granting `Manage`.
-  **In the mirror.** A directory group *carries an administrative right* when it holds `Manage` on anything or a member has an
-  admin role in it. Agents and unknowns are never written into such a group's list, direct or flat from a child, and a nested
-  edge whose child closure holds one is written flat without them; they are named in `SyncReport::left_out`. A change of
-  status or marking heals at the next sync. No checker wired: everyone is unknown, so such a group gets no people. **Fail closed:** an unreadable delegation (whose right may be `Manage`) makes its holder group count as administrative, all groups if
-  the holder cannot be told; an unreadable membership does the same for its group. Where an unreadable object touches a group (the
-  group, the groups above it, or all if that cannot be told) the sync keeps what the directory holds, but in an administrative group
-  it asks the checker about what is there, drops agents and unknowns (named in `left_out`) and keeps an old nested edge only if the
-  child's whole closure in the directory is known human. Revocations elsewhere go on. A stored object whose type changed is
-  never removed. **Order:** writes that take away go first (parents before children), then those that add (children first), so an
-  agent is never written to a child while an administrative parent still nests it; if that parent cannot be updated, the children
-  below it are held back and reported.
+  **In the mirror: one invariant, checked on the final plan.** A directory group *carries an administrative right* when it holds
+  `Manage` on anything or a member has an admin role in it. The invariant: **no agent and no unknown person is in the closure of
+  such a group**, whether listed in it, listed flat from a child, nested through a child, wanted, held still or kept as it is.
+  It is no longer kept by checks along each path. `sync_to` works in three steps:
+  1. *Plan.* For every group the directory will hold after the run (the groups we write, held still where something unreadable
+     touches them, and the ones we leave as they are, such as a group we cannot read) the members and nested edges it will
+     have. The directory's own list is only an input.
+  2. `mirror::enforce(plan, rule, verdicts)`, a pure function and the only place that knows the rule: it walks the planned
+     closure of every administrative group; whoever the rule bars is dropped from a direct listing, and a nested edge whose
+     child closure holds one is replaced by a flat listing without them. It repeats until stable and names a person in
+     `SyncReport::left_out` only if they are really out of that group's closure. The host's verdicts (`Mirror::verdicts`, asked
+     for everybody in the plan, also people the directory lists that we cannot name from our data) are its input; a person
+     without a verdict is unknown. A group the rule changes but we do not otherwise write (an agent in a group we cannot read)
+     is written too.
+  3. *Order.* Writes that take away go first (parents before children by the nesting the directory has now), then those that
+     add (children first). A write that adds anybody is held back, and reported, when a group above it in the directory
+     could not be updated, or when it adds an edge to a group that is not yet in its final state; a group that is held back or
+     refused blocks the adds below it in turn. So the rule holds after every write, refused ones included
+     (`tests/mirror_property.rs`: random states, refusals and unreadable objects; no new violation after any prefix of the
+     writes, and none at the end when nothing is refused).
+  **Strict and lenient.** A group is *known* administrative when a readable delegation or role says so, or when an unreadable
+  object that still names it (a membership of it, a delegation held by it, in the index or the content) might. There agents
+  and unknown people are barred. If an unreadable delegation might be `Manage` and its holder cannot be told at all, **any group
+  may be administrative**: then only known agents are barred everywhere, and unknown people are reported
+  (`SyncReport::unchecked`) but stay, so a host that cannot answer does not empty ordinary groups. No checker wired: everyone is
+  unknown, so a known administrative group gets no people.
+  **What counts as unreadable (fail closed).** Everything in the context is read once and sorted by type. Unreadable are: a
+  group or membership or delegation that cannot be parsed; one whose index and AS2 content disagree (the content is authoritative:
+  group, person, role, right; a hand-edited `right=read` over `manage` is noticed); an object of a type we do not know (a
+  membership changed to `Note`); a membership of a group; a group with a corrupt parent entry (`fs:parents` not a list of ids)
+  or a parent that exists nowhere. They are listed in `SyncReport::unreadable` and the run is not quiet. Where one touches a
+  group (the group, the groups above it, or every group if that cannot be told) the sync keeps what the directory holds (and
+  the rule still applies to it); revocations elsewhere go on. A stored object whose type changed is never removed from the
+  directory.
 * **The top admin is whoever installs (provisional).** `with_installer(identity)` is configuration only: `may_do` is true for that
   identity on every group that is not on a loop, if they are known not to be an agent. They appoint further admins by `grant`ing `Manage` (or an admin
   role); who may grant is not enforced. No authentication is built.

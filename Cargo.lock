@@ -526,6 +526,7 @@ dependencies = [
  "chrono",
  "fs-interfaces",
  "fs-store",
+ "icu_properties",
  "serde_json",
  "thiserror",
  "tokio",

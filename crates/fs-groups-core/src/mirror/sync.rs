@@ -9,11 +9,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use async_trait::async_trait;
 use fs_store::ObjectId;
 
+use super::enforce::enforce;
 use super::plan::plan;
 use super::report::{Divergence, SyncReport};
 use super::steps::hold_still;
-use super::steps::{below, current_state, merge_left_out, put, split_steps};
-use super::wanted::{Scope, Wanted};
+use super::steps::{current_state, split_steps, write_all};
+use super::wanted::{AdminRule, Scope, Verdict, Wanted};
 use crate::error::Result;
 use crate::traits::{DirectoryGroup, GroupDirectory};
 
@@ -33,30 +34,25 @@ pub trait Mirror: Send + Sync {
     async fn looped(&self) -> Result<Vec<ObjectId>> {
         Ok(vec![])
     }
-    /// `(group, people)` that `desired` leaves out of a group that carries an administrative right,
-    /// because they are agents or not known to be human (ADR 0056). Default: none.
-    async fn left_out(&self) -> Result<Vec<(ObjectId, Vec<String>)>> {
-        Ok(vec![])
-    }
     /// The edges of `desired` where the directory gives the child's people more than `may_do`.
     /// Only reported by `sync_to`; nothing is changed because of them. Default: none.
     async fn divergences(&self) -> Result<Vec<Divergence>> {
         Ok(vec![])
     }
     /// Everything above in one answer, worked out once. The default asks the single methods; if
-    /// something is unreadable it holds still everywhere (`uncertain.all`).
+    /// something is unreadable it holds still everywhere (`uncertain.all`). It knows no
+    /// administrative group.
     async fn wanted(&self) -> Result<Wanted> {
         let unreadable = self.unreadable().await?;
         Ok(Wanted {
             groups: self.desired().await?,
-            left_out: self.left_out().await?,
             looped: self.looped().await?,
             uncertain: Scope {
                 all: !unreadable.is_empty(),
                 ..Scope::default()
             },
             unreadable,
-            admin: Scope::default(),
+            admin: AdminRule::default(),
         })
     }
     /// Whether an object with this id is still stored although it is not a group `desired` has
@@ -66,19 +62,24 @@ pub trait Mirror: Send + Sync {
     }
     /// The group to write for `group` while something that touches it cannot be read
     /// (`wanted.uncertain`): what is wanted plus what the directory holds now, so that nobody is
-    /// taken out because of a gap. Also the people that had to be dropped. The default keeps
-    /// everything; a source that knows administrative groups drops agents there.
+    /// taken out because of a gap. The rule about agents is not applied here but to the whole plan.
     async fn settle(
         &self,
         group: DirectoryGroup,
         current: &BTreeMap<ObjectId, DirectoryGroup>,
         wanted: &Wanted,
-    ) -> Result<(DirectoryGroup, Vec<String>)> {
-        if wanted.uncertain.covers(group.id) && current.contains_key(&group.id) {
-            Ok((hold_still(group, current), vec![]))
+    ) -> Result<DirectoryGroup> {
+        if wanted.uncertain.covers(group.id) {
+            Ok(hold_still(group, current))
         } else {
-            Ok((group, vec![]))
+            Ok(group)
         }
+    }
+    /// The host's verdict on each of `people`, for the rule that an agent is never admin. A person
+    /// missing from the answer counts as unknown. Default: none (the default `wanted` has no
+    /// administrative group).
+    async fn verdicts(&self, _people: &BTreeSet<String>) -> Result<BTreeMap<String, Verdict>> {
+        Ok(BTreeMap::new())
     }
     /// Remember which ids are in the directory now.
     async fn remember(&self, directory: &str, ids: &BTreeSet<ObjectId>) -> Result<()>;
@@ -129,37 +130,35 @@ pub trait Mirror: Send + Sync {
             .iter()
             .map(|g| (g.id, g.clone().normalised()))
             .collect();
-        // where something unreadable touches a group, keep what is there (minus agents)
-        let mut desired = vec![];
-        let mut dropped_by_group = vec![];
+        // the final plan: what is wanted, held still where something is unreadable, then the rule
+        // The plan is every group the directory will hold after the run: the ones we write, and
+        // the ones we leave as they are (a group we cannot read is still nested in its parent).
+        let mut target = there.clone();
+        target.retain(|id, _| !removable.contains(id) || ids.contains(id));
         for g in &wanted.groups {
-            let (g, dropped) = self.settle(g.clone(), &there, &wanted).await?;
-            dropped_by_group.push((g.id, dropped));
-            desired.push(g);
+            let g = self.settle(g.clone(), &there, &wanted).await?.normalised();
+            target.insert(g.id, g);
         }
-        report.left_out = merge_left_out(&wanted.left_out, dropped_by_group);
-        let order: BTreeMap<_, _> = desired.iter().enumerate().map(|(i, g)| (g.id, i)).collect();
-        let (mut takes, mut gives, removals) =
+        let people: BTreeSet<_> = target.values().flat_map(|g| g.members.clone()).collect();
+        let verdicts = self.verdicts(&people).await?;
+        let enforced = enforce(&mut target, &wanted.admin, &verdicts);
+        report.left_out = enforced.left_out;
+        report.unchecked = enforced.unchecked;
+        let mut desired: Vec<_> = wanted
+            .groups
+            .iter()
+            .map(|g| target[&g.id].clone())
+            .collect();
+        // a group we leave alone but the rule changed (an agent in a group we cannot read) is written too
+        desired.extend(
+            target
+                .iter()
+                .filter(|(id, g)| !ids.contains(id) && there.get(id) != Some(g))
+                .map(|(_, g)| g.clone()),
+        );
+        let (takes, gives, removals) =
             split_steps(plan(&desired, &current, &removable), &there, &mut report);
-        // parents before children for what takes away, children before parents for what adds
-        takes.sort_by_key(|(g, _)| std::cmp::Reverse(order.get(&g.id).copied()));
-        gives.sort_by_key(|(g, _)| order.get(&g.id).copied());
-        let mut held_back = BTreeSet::new();
-        for (g, new) in takes {
-            let id = g.id;
-            if !put(directory, g, new, &mut present, &mut report).await {
-                held_back.extend(below(&there, id));
-            }
-        }
-        for (g, new) in gives {
-            if held_back.contains(&g.id) {
-                let why =
-                    "held back: a group above it that nests it could not be updated".to_string();
-                report.failed.push((g.id, why));
-                continue;
-            }
-            put(directory, g, new, &mut present, &mut report).await;
-        }
+        write_all(directory, takes, gives, &there, &mut present, &mut report).await;
         let mut removed = BTreeSet::new();
         for id in removals {
             // a stored object that is no longer a readable group stays where it is

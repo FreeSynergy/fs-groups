@@ -29,8 +29,9 @@ impl GroupRepo {
         if invitee.trim().is_empty() {
             return Err(Error::Conflict("an invitation needs an invitee".into()));
         }
-        let (invitee, role) = (invitee.trim(), role.trim());
-        text::check_person("invitee", invitee)?;
+        let role = role.trim();
+        let invitee = text::person("invitee", invitee)?;
+        let invitee = invitee.as_str();
         text::check_role("role", role)?;
         let w = self.writer().await;
         let g = w.require(group).await?;
@@ -103,11 +104,11 @@ impl GroupRepo {
         proved: Option<&str>,
         now: Timestamp,
     ) -> Result<Membership> {
-        let person = person.trim();
-        if person.is_empty() {
+        if person.trim().is_empty() {
             return Err(Error::Conflict("an accepting person needs an IRI".into()));
         }
-        text::check_person("person", person)?;
+        let person = text::person("person", person)?;
+        let person = person.as_str();
         let w = self.writer().await;
         let (o, inv) = w.invitation(id).await?;
         let next = inv.state.on(Step::Accept, inv.ran_out(now))?;

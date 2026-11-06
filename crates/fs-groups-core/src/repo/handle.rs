@@ -153,13 +153,12 @@ impl GroupRepo {
     /// only compares the string it is asked about. Padded, empty or invisible text is refused.
     pub fn with_installer(mut self, installer: impl Into<String>) -> Result<Self> {
         let installer = installer.into();
-        text::check_person("installer", &installer)?;
         if installer.is_empty() || installer != installer.trim() {
             return Err(Error::Conflict(
                 "the installer identity must not be empty or padded".into(),
             ));
         }
-        self.installer = Some(installer);
+        self.installer = Some(text::person("installer", &installer)?);
         Ok(self)
     }
 

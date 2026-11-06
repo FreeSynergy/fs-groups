@@ -21,16 +21,31 @@ fn member_of(o: &StoredObject, kind: &str, key: &str) -> Option<Member> {
     Member::from_parts(one(o, kind)?, one(o, key)?)
 }
 
+/// A text member of the AS2 content.
+fn content<'a>(o: &'a StoredObject, key: &str) -> Option<&'a str> {
+    o.content.get(key)?.as_str()
+}
+
+/// The group id at the end of a group IRI (`https://<instance>/groups/<id>`).
+fn group_in(iri: &str) -> Option<ObjectId> {
+    iri.rsplit('/').next()?.parse().ok()
+}
+
+/// A membership, read from the index fields **and checked against the AS2 content**, which is the
+/// authoritative form: group, person and role must agree. Where they do not, someone edited one of
+/// them by hand and the object is unreadable (the caller reports it, and fails closed).
 pub(super) fn membership(o: &StoredObject) -> Option<Membership> {
-    Some(Membership {
+    let group = id_of(o, "group")?;
+    let member = member_of(o, "member_kind", "member")?;
+    let role = one(o, "role").unwrap_or_default();
+    let agrees = group_in(content(o, "object")?) == Some(group)
+        && content(o, "subject")? == member.key()
+        && content(o, "org:role").unwrap_or_default() == role;
+    agrees.then(|| Membership {
         id: o.envelope.id,
-        group: id_of(o, "group")?,
-        member: member_of(o, "member_kind", "member")?,
-        // the index is what is searched; if it lost the role, the standard-shaped content still has it
-        role: one(o, "role")
-            .or_else(|| o.content.get("org:role")?.as_str())
-            .unwrap_or_default()
-            .to_string(),
+        group,
+        member,
+        role: role.to_string(),
         in_force: true,
     })
 }
@@ -46,12 +61,19 @@ pub(super) fn invitation(o: &StoredObject) -> Option<Invitation> {
     })
 }
 
+/// A delegation, read from the index and checked against the AS2 content (see [`membership`]).
 pub(super) fn delegation(o: &StoredObject) -> Option<Delegation> {
-    Some(Delegation {
+    let group = id_of(o, "group")?;
+    let holder = member_of(o, "holder_kind", "holder")?;
+    let right = Right::parse(one(o, "right")?)?;
+    let agrees = group_in(content(o, "object")?) == Some(group)
+        && content(o, "subject")? == holder.key()
+        && content(o, "fs:right")? == right.as_str();
+    agrees.then_some(Delegation {
         id: o.envelope.id,
-        group: id_of(o, "group")?,
-        holder: member_of(o, "holder_kind", "holder")?,
-        right: Right::parse(one(o, "right").or_else(|| o.content.get("fs:right")?.as_str())?)?,
+        group,
+        holder,
+        right,
         in_force: true,
     })
 }

@@ -15,7 +15,7 @@ impl GroupRepo {
     }
 
     /// The host's answer for `person`, asked in canonical spelling. `None`: no answer, or no checker.
-    async fn ai_answer(&self, person: &str) -> Result<Option<bool>> {
+    pub(super) async fn ai_answer(&self, person: &str) -> Result<Option<bool>> {
         match &self.ai {
             None => Ok(None),
             Some(ai) => ai.is_ai(&text::canonical_person(person)).await,
