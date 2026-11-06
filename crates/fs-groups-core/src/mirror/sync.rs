@@ -116,22 +116,7 @@ pub trait Mirror: Send + Sync {
             looped: wanted.looped.clone(),
             ..SyncReport::default()
         };
-        let mut current = directory.list().await?;
-        let mut gone = BTreeSet::new();
-        // `list` may have left out a group of ours: ask for it before deciding it is gone.
-        let listed: BTreeSet<_> = current.iter().map(|g| g.id).collect();
-        for id in known
-            .iter()
-            .filter(|id| !ids.contains(id) && !listed.contains(id))
-        {
-            match directory.read(*id).await {
-                Ok(Some(g)) => current.push(g),
-                Ok(None) => {
-                    gone.insert(*id);
-                }
-                Err(e) => report.failed.push((*id, e.to_string())),
-            }
-        }
+        let (current, gone) = current_state(directory, &known, &ids, &mut report).await?;
         let removable: BTreeSet<_> = known
             .iter()
             .filter(|id| !wanted.unreadable.contains(id))
@@ -144,36 +129,16 @@ pub trait Mirror: Send + Sync {
             .collect();
         // where something unreadable touches a group, keep what is there (minus agents)
         let mut desired = vec![];
-        let mut left_out: BTreeMap<ObjectId, BTreeSet<String>> = BTreeMap::new();
-        for (id, people) in &wanted.left_out {
-            left_out
-                .entry(*id)
-                .or_default()
-                .extend(people.iter().cloned());
-        }
+        let mut dropped_by_group = vec![];
         for g in &wanted.groups {
             let (g, dropped) = self.settle(g.clone(), &there, &wanted).await?;
-            left_out.entry(g.id).or_default().extend(dropped);
+            dropped_by_group.push((g.id, dropped));
             desired.push(g);
         }
-        left_out.retain(|_, people| !people.is_empty());
-        report.left_out = left_out
-            .into_iter()
-            .map(|(id, people)| (id, people.into_iter().collect()))
-            .collect();
+        report.left_out = merge_left_out(&wanted.left_out, dropped_by_group);
         let order: BTreeMap<_, _> = desired.iter().enumerate().map(|(i, g)| (g.id, i)).collect();
-        let (mut takes, mut gives, mut removals) = (vec![], vec![], vec![]);
-        for step in plan(&desired, &current, &removable) {
-            match step {
-                Change::Keep(id) => report.unchanged.push(id),
-                Change::Create(g) => gives.push((g, true)),
-                Change::Update(g) => match there.get(&g.id) {
-                    Some(now) if takes_away(now, &g) => takes.push((g, false)),
-                    _ => gives.push((g, false)),
-                },
-                Change::Remove(id) => removals.push(id),
-            }
-        }
+        let (mut takes, mut gives, removals) =
+            split_steps(plan(&desired, &current, &removable), &there, &mut report);
         // parents before children for what takes away, children before parents for what adds
         takes.sort_by_key(|(g, _)| std::cmp::Reverse(order.get(&g.id).copied()));
         gives.sort_by_key(|(g, _)| order.get(&g.id).copied());
@@ -290,4 +255,71 @@ pub(crate) fn hold_still(
         wanted.nested.extend(now.nested.iter().copied());
     }
     wanted.normalised()
+}
+
+/// What the directory holds now (asking for a group of ours that `list` left out before deciding it
+/// is gone), and the ids confirmed gone.
+async fn current_state(
+    directory: &dyn GroupDirectory,
+    known: &BTreeSet<ObjectId>,
+    wanted: &BTreeSet<ObjectId>,
+    report: &mut SyncReport,
+) -> Result<(Vec<DirectoryGroup>, BTreeSet<ObjectId>)> {
+    let mut current = directory.list().await?;
+    let mut gone = BTreeSet::new();
+    let listed: BTreeSet<_> = current.iter().map(|g| g.id).collect();
+    for id in known
+        .iter()
+        .filter(|id| !wanted.contains(id) && !listed.contains(id))
+    {
+        match directory.read(*id).await {
+            Ok(Some(g)) => current.push(g),
+            Ok(None) => {
+                gone.insert(*id);
+            }
+            Err(e) => report.failed.push((*id, e.to_string())),
+        }
+    }
+    Ok((current, gone))
+}
+
+/// The people left out of each group, from the source and from the groups that were held still.
+fn merge_left_out(
+    from_source: &[(ObjectId, Vec<String>)],
+    dropped: Vec<(ObjectId, Vec<String>)>,
+) -> Vec<(ObjectId, Vec<String>)> {
+    let mut merged: BTreeMap<ObjectId, BTreeSet<String>> = BTreeMap::new();
+    for (id, people) in from_source.iter().cloned().chain(dropped) {
+        merged.entry(id).or_default().extend(people);
+    }
+    merged
+        .into_iter()
+        .filter(|(_, people)| !people.is_empty())
+        .map(|(id, people)| (id, people.into_iter().collect()))
+        .collect()
+}
+
+/// Groups to write, each with whether it is new.
+type Writes = Vec<(DirectoryGroup, bool)>;
+
+/// The groups to write, split into those that take something away and those that add, and the ids
+/// to remove. Equal groups are noted as unchanged.
+fn split_steps(
+    steps: Vec<Change>,
+    there: &BTreeMap<ObjectId, DirectoryGroup>,
+    report: &mut SyncReport,
+) -> (Writes, Writes, Vec<ObjectId>) {
+    let (mut takes, mut gives, mut removals) = (vec![], vec![], vec![]);
+    for step in steps {
+        match step {
+            Change::Keep(id) => report.unchanged.push(id),
+            Change::Create(g) => gives.push((g, true)),
+            Change::Update(g) => match there.get(&g.id) {
+                Some(now) if takes_away(now, &g) => takes.push((g, false)),
+                _ => gives.push((g, false)),
+            },
+            Change::Remove(id) => removals.push(id),
+        }
+    }
+    (takes, gives, removals)
 }
