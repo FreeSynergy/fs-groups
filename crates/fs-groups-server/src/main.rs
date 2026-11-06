@@ -1,4 +1,4 @@
-//! `fs-groups-server`. Usage: `fs-groups-server [--socket PATH] [--data DIR] [--actor IRI]`.
+//! `fs-groups-server`. Usage: `fs-groups-server [--socket PATH] [--data DIR] [--actor IRI] [--instance DOMAIN]`.
 //!
 //! `--actor` is only a name: the core decides "may approve" about it and nothing authenticates it.
 //!
@@ -19,7 +19,12 @@ fn main() {
             .await
             .map_err(std::io::Error::other)?;
         let store: Arc<dyn Store> = Arc::new(store);
-        let repo = Arc::new(GroupRepo::new(store, options.actor.clone()));
+        let repo = GroupRepo::new(store, options.actor.clone());
+        let repo = match &options.instance {
+            Some(instance) => repo.with_instance(instance),
+            None => repo,
+        };
+        let repo = Arc::new(repo);
         Ok(GroupsServer::new(repo).into_client().client)
     });
     if let Err(e) = served {

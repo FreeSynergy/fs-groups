@@ -11,7 +11,7 @@ use fs_interfaces::groups_capnp::delegations;
 
 use crate::errors::rpc_error;
 use crate::wire::{
-    read_id, read_member, read_right, read_text, write_delegation, write_delegations,
+    read_id, read_identifier, read_member, read_right, request, write_delegation, write_delegations,
 };
 
 pub(crate) struct DelegationsImpl {
@@ -26,9 +26,9 @@ impl delegations::Server for DelegationsImpl {
         params: delegations::GrantParams,
         mut results: delegations::GrantResults,
     ) -> Done {
-        let p = params.get()?;
+        let p = request(params.get())?;
         let group = read_id(p.get_group())?;
-        let holder = read_member(p.get_holder()?)?;
+        let holder = read_member(p.get_holder())?;
         let right = read_right(p.get_right())?;
         let delegation = self
             .delegations
@@ -44,7 +44,7 @@ impl delegations::Server for DelegationsImpl {
         params: delegations::RevokeParams,
         _: delegations::RevokeResults,
     ) -> Done {
-        let id = read_id(params.get()?.get_id())?;
+        let id = read_id(request(params.get())?.get_id())?;
         self.delegations.revoke(id).await.map_err(rpc_error)
     }
 
@@ -53,7 +53,7 @@ impl delegations::Server for DelegationsImpl {
         params: delegations::ListParams,
         mut results: delegations::ListResults,
     ) -> Done {
-        let group = read_id(params.get()?.get_group())?;
+        let group = read_id(request(params.get())?.get_group())?;
         let found = self.delegations.list(group).await.map_err(rpc_error)?;
         write_delegations(&found, |n| results.get().init_items(n))
     }
@@ -63,9 +63,9 @@ impl delegations::Server for DelegationsImpl {
         params: delegations::MayDoParams,
         mut results: delegations::MayDoResults,
     ) -> Done {
-        let p = params.get()?;
+        let p = request(params.get())?;
         let group = read_id(p.get_group())?;
-        let person = read_text(p.get_person())?;
+        let person = read_identifier(p.get_person())?;
         let right = read_right(p.get_right())?;
         let allowed = self
             .delegations

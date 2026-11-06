@@ -26,8 +26,9 @@ pub trait Invitations: Send + Sync {
     ) -> Result<Invitation> {
         not_possible("invite.create")
     }
-    /// `invite.answer`: `person` accepts at `now`; this creates the membership. Only the invitee can
-    /// accept: `person` must be the invitee exactly, else `Error::NotInvitee`.
+    /// `invite.answer`: `person` accepts at `now`; this creates the membership. Compares strings
+    /// only: `person` must equal the invitee, else `Error::NotInvitee`; an e-mail invitee is refused
+    /// here (provisional) and needs `accept_proved`.
     async fn accept(&self, _id: ObjectId, _person: &str, _now: Timestamp) -> Result<Membership> {
         not_possible("invite.answer")
     }

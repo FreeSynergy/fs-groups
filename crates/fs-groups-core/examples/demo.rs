@@ -35,10 +35,11 @@ async fn main() -> Result<(), Error> {
         .invite(team.id, "bo@example.org", "member", expires)
         .await?;
     let bo = "https://example.org/people/bo";
-    Invitations::accept(
+    Invitations::accept_proved(
         &repo,
         invitation.id,
         bo,
+        "bo@example.org",
         Timestamp::from_timestamp(1_800_000_000, 0).unwrap(),
     )
     .await?;

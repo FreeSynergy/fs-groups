@@ -68,11 +68,11 @@ impl GroupRepo {
 
     /// `invite.answer`: `person` accepts at `now`; this creates the membership (or finds it).
     ///
-    /// **Only the invitee can accept.** `person` must be the invitee exactly. If the invitation went
-    /// to an e-mail address, a person (an IRI) cannot be compared with it here: use
-    /// [`GroupRepo::accept_proved`]. A wrong person gets [`Error::NotInvitee`] and the invitation
-    /// stays as it is. An invitation that ran out is stored as `expired` and refused with
-    /// [`Error::Expired`].
+    /// **Compares strings only.** `person` must equal the invitee; nothing here knows that the caller
+    /// is that person. An invitation sent to an e-mail address is refused here whatever the string
+    /// (**provisional**): it needs [`GroupRepo::accept_proved`]. A wrong person gets
+    /// [`Error::NotInvitee`] and the invitation stays as it is. An invitation that ran out is stored
+    /// as `expired` and refused with [`Error::Expired`], the same before and after a sweep.
     pub async fn accept(&self, id: ObjectId, person: &str, now: Timestamp) -> Result<Membership> {
         self.answer_accept(id, person, None, now).await
     }
@@ -106,6 +106,14 @@ impl GroupRepo {
         }
         let w = self.writer().await;
         let (o, inv) = w.invitation(id).await?;
+        // Whether a sweep marked it first must not change the answer.
+        if inv.state == InvitationState::Expired {
+            return Err(if inv.is_for(person, proved) {
+                Error::Expired(id)
+            } else {
+                Error::NotInvitee(id)
+            });
+        }
         let next = inv.state.on(Step::Accept, inv.ran_out(now))?;
         if !inv.is_for(person, proved) {
             return Err(Error::NotInvitee(id));

@@ -9,7 +9,8 @@ rust-version.workspace = true
 [dependencies]
 fs-store = { git = "https://github.com/FreeSynergy/fs-store", tag = "v0.2.0" }
 # The contract and the provider rule (ADR 0045).
-fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.22.0" }
+# TEMPORARY branch: pin the tag once run_to_end and the Memberships cursor are tagged.
+fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", branch = "groups-members-cursor" }
 serde_json = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 thiserror = "2"

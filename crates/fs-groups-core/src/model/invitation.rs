@@ -63,16 +63,17 @@ pub struct Invitation {
 }
 
 impl Invitation {
-    /// Whether `person` may answer this invitation. `person` is the invitee exactly (IRIs are case
-    /// sensitive). `proved` is an address the caller vouches the person controls: it counts only for
-    /// an invitee that is an e-mail address, compared ignoring case. **Provisional** (see
-    /// `GroupRepo::accept_proved`).
+    /// Whether these strings match this invitation; nothing says who is really asking. An invitee that
+    /// is an e-mail address needs `proved`, an address the caller vouches the person controls, compared
+    /// ignoring case; saying the address as `person` is no proof. Any other invitee is `person` exactly
+    /// (IRIs are case sensitive). **Provisional** (see `GroupRepo::accept_proved`).
     pub fn is_for(&self, person: &str, proved: Option<&str>) -> bool {
-        if self.invitee == person {
-            return true;
-        }
         let is_mail = self.invitee.contains('@') && !self.invitee.contains("://");
-        is_mail && proved.is_some_and(|p| p.trim().eq_ignore_ascii_case(&self.invitee))
+        if is_mail {
+            proved.is_some_and(|p| p.trim().eq_ignore_ascii_case(&self.invitee))
+        } else {
+            self.invitee == person
+        }
     }
 
     /// Whether the expiry time has passed at `now`. The moment itself counts as passed.

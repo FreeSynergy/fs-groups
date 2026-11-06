@@ -99,3 +99,16 @@ async fn removing_ends_the_membership_and_unknown_ids_are_not_found() {
         "a group is not a membership"
     );
 }
+
+#[tokio::test]
+async fn is_member_and_groups_of_trim_the_person_as_add_does() {
+    let r = repo().await;
+    let g = r.create("Club", "").await.unwrap();
+    r.add(g.id, Member::Person(format!(" {} ", person("ada"))), "")
+        .await
+        .unwrap();
+    let spaced = format!("  {}\n", person("ada"));
+    assert!(r.is_member(g.id, &spaced).await.unwrap());
+    assert_eq!(r.groups_of(&spaced).await.unwrap(), [g.id]);
+    assert!(r.groups_of("   ").await.unwrap().is_empty());
+}

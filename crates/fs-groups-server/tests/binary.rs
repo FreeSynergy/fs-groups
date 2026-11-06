@@ -21,6 +21,8 @@ fn start(socket: &Path, data: &Path, actor: &str) -> Child {
         .arg(data)
         .arg("--actor")
         .arg(actor)
+        .arg("--instance")
+        .arg("example.org")
         .stderr(Stdio::null())
         .spawn()
         .unwrap()
@@ -64,6 +66,8 @@ async fn create(items: &items::Client, name: &str) -> Uuid {
     let group = answer.get().unwrap().get_group().unwrap();
     let envelope = read_envelope(group.get_envelope().unwrap()).unwrap();
     assert_eq!(envelope.attributed_to.as_deref(), Some(OWNER));
+    let iri = format!("https://example.org/groups/{}", envelope.id);
+    assert_eq!(envelope.iri.as_deref(), Some(iri.as_str()));
     envelope.id.as_uuid()
 }
 

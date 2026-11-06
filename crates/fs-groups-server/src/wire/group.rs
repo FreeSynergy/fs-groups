@@ -10,7 +10,7 @@ use fs_interfaces::rpc::{
 };
 use fs_interfaces::{common_capnp, groups_capnp};
 
-use super::basic::{ID_BYTES, list_len};
+use super::basic::{ID_BYTES, list_len, read_cursor};
 
 fn flow_to_wire(flow: RightFlow) -> groups_capnp::RightFlow {
     match flow {
@@ -60,7 +60,7 @@ pub(crate) fn write_page(
     all: Vec<Group>,
     cursor: capnp::Result<common_capnp::cursor::Reader<'_>>,
 ) -> capnp::Result<()> {
-    let opaque = cursor?.get_opaque()?;
+    let opaque = read_cursor(cursor)?;
     let page = Page::of_weighted(all, opaque, DEFAULT_PAGE_SIZE, weight)?;
     let count = u32::try_from(page.items.len()).map_err(|_| too_large("page too long"))?;
     let mut items = out.reborrow().init_items(count);

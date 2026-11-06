@@ -9,9 +9,12 @@ mod invitation;
 mod member;
 mod parent_request;
 
-pub(crate) use basic::{read_id, read_text, write_ids};
+pub(crate) use basic::{read_cursor, read_id, read_identifier, read_text, request, write_ids};
 pub(crate) use delegation::{read_right, write_delegation, write_delegations};
 pub(crate) use group::{read_flow, write_group, write_page};
 pub(crate) use invitation::{read_expires, write_invitation, write_invitations};
-pub(crate) use member::{read_member, write_effective, write_membership, write_memberships};
+pub(crate) use member::{
+    effective_weight, membership_weight, read_member, write_effective, write_membership,
+    write_memberships,
+};
 pub(crate) use parent_request::{write_parent_request, write_parent_requests};

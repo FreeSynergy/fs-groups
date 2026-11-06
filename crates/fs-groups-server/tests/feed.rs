@@ -4,13 +4,22 @@ mod common;
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use async_trait::async_trait;
 use capnp_rpc::new_client;
-use common::{create, delegations_of, invitations_of, items_of, members_of, nest, with_server};
+use common::{
+    create, delegations_of, invitations_of, items_of, members_of, nest, store, with_client,
+    with_server,
+};
+use fs_groups_core::{DirectoryGroup, GroupDirectory, GroupRepo, Mirror};
+use fs_groups_server::GroupsServer;
+use fs_interfaces::Capabilities;
 use fs_interfaces::common_capnp::{change, change_listener};
 use fs_interfaces::groups_capnp::Right;
 use fs_interfaces::rpc::{read_envelope, read_uuid, write_uuid};
+use fs_store::ObjectId;
 
 #[derive(Clone, Default)]
 struct Seen(Rc<RefCell<Vec<String>>>);
@@ -134,4 +143,57 @@ async fn subscribers_see_every_write_until_they_drop_the_capability() {
         assert!(seen.take().await.is_empty(), "still told after the drop");
     })
     .await;
+}
+
+/// A directory held in memory: only the target of the mirror, the provider stays the real one.
+#[derive(Default)]
+struct Directory(Mutex<Vec<DirectoryGroup>>);
+
+#[async_trait]
+impl GroupDirectory for Directory {
+    fn capabilities(&self) -> Capabilities {
+        let mut c = Capabilities::new("memory");
+        c.supported("directory.apply").supported("directory.read");
+        c
+    }
+    async fn read(&self, id: ObjectId) -> fs_groups_core::Result<Option<DirectoryGroup>> {
+        let held = self.0.lock().unwrap();
+        Ok(held.iter().find(|g| g.id == id).cloned())
+    }
+    async fn list(&self) -> fs_groups_core::Result<Vec<DirectoryGroup>> {
+        Ok(self.0.lock().unwrap().clone())
+    }
+    async fn apply(&self, group: &DirectoryGroup) -> fs_groups_core::Result<()> {
+        self.0.lock().unwrap().push(group.clone());
+        Ok(())
+    }
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn a_mirror_run_does_not_reach_the_feed() {
+    let local = tokio::task::LocalSet::new();
+    local
+        .run_until(async {
+            let repo = Arc::new(GroupRepo::new(store().await, common::ME));
+            let server = GroupsServer::new(repo.clone()).into_client();
+            with_client(server, |root| async move {
+                let items = items_of(&root).await;
+                let seen = Seen::default();
+                let mut sub = root.subscribe_request();
+                sub.get().set_listener(new_client(seen.clone()));
+                let answer = sub.send().promise.await.unwrap();
+                let _subscription = answer.get().unwrap().get_subscription().unwrap();
+
+                let g = create(&items, "Mirrored").await;
+                assert_eq!(seen.take().await, ["created Group Mirrored"]);
+
+                let directory = Directory::default();
+                let report = repo.sync_to(&directory).await.unwrap();
+                assert_eq!(report.created.len(), 1);
+                assert_eq!(directory.0.lock().unwrap()[0].id.as_uuid(), g);
+                assert!(seen.take().await.is_empty(), "the ledger reached the feed");
+            })
+            .await;
+        })
+        .await;
 }

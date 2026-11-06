@@ -4,6 +4,8 @@
 //! same step; `delete` is a Command-like cascade that removes everything that hangs on the group,
 //! then the group (children stay).
 
+use std::collections::BTreeSet;
+
 use fs_store::{ObjectId, Order, Query};
 
 use super::consts::{CONTEXT, GROUP_TYPE};
@@ -127,8 +129,10 @@ impl GroupRepo {
             .with_index("holder_kind", Member::Group(id).kind())
             .with_index("holder", id.to_string());
         depending.extend(w.reads.query(&held).await?);
-        for o in depending {
-            w.remove_object(o.envelope.id).await?;
+        // One object can match twice: a group holding a right on itself.
+        let ids: BTreeSet<ObjectId> = depending.iter().map(|o| o.envelope.id).collect();
+        for id in ids {
+            w.remove_object(id).await?;
         }
         for mut child in w
             .all_groups()

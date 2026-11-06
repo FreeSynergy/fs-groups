@@ -18,6 +18,7 @@ use crate::invitations_service::InvitationsImpl;
 use crate::items_service::ItemsImpl;
 use crate::memberships_service::MembershipsImpl;
 use crate::nesting_service::ADD_PARENT;
+use crate::wire::request;
 
 /// The version named in the header of `groups.capnp`.
 const CONTRACT_VERSION: &str = "groups 0.1 (draft)";
@@ -120,7 +121,7 @@ impl groups::Server for GroupsServer {
         params: groups::SubscribeParams,
         mut results: groups::SubscribeResults,
     ) -> Done {
-        let listener = params.get()?.get_listener()?;
+        let listener = request(request(params.get())?.get_listener())?;
         results
             .get()
             .set_subscription(subscribe(&self.feed, listener));

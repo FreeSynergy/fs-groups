@@ -126,6 +126,41 @@ async fn a_group_holds_a_right_for_its_members_and_the_setting_reaches_the_core(
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn up_passes_a_right_to_the_parent_and_not_the_other_way() {
+    with_server(|root| async move {
+        let items = items_of(&root).await;
+        let d = delegations_of(&root).await;
+        let (top, sub) = (create(&items, "Top").await, create(&items, "Sub").await);
+        nest(&items, sub, top).await;
+        let (on_sub, on_top) = ("https://example.org/on-sub", "https://example.org/on-top");
+        grant_person(&d, sub, on_sub, Right::Read).await;
+        grant_person(&d, top, on_top, Right::Read).await;
+        assert!(
+            !may(&d, top, on_sub, Right::Read).await,
+            "none passes nothing on"
+        );
+
+        for group in [top, sub] {
+            let mut set = items.set_right_flow_request();
+            write_uuid(set.get().init_id(), Some(group));
+            set.get().set_flow(RightFlow::Up);
+            let answer = set.send().promise.await.unwrap();
+            let g = answer.get().unwrap().get_group().unwrap();
+            assert_eq!(g.get_right_flow().unwrap(), RightFlow::Up);
+        }
+        assert!(
+            may(&d, top, on_sub, Right::Read).await,
+            "up reaches the parent"
+        );
+        assert!(
+            !may(&d, sub, on_top, Right::Read).await,
+            "up does not reach the child"
+        );
+    })
+    .await;
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn refusals() {
     with_server(|root| async move {
         let d = delegations_of(&root).await;

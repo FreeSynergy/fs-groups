@@ -50,6 +50,12 @@ async fn a_link_exists_only_after_approval_and_reads_follow_it() {
         let child = approved.get().unwrap().get_group().unwrap();
         assert_eq!(ids(child.get_parents().unwrap()), [top]);
 
+        let mut read = items.parent_requests_request();
+        write_uuid(read.get().init_parent(), Some(top));
+        let answer = read.send().promise.await.unwrap();
+        let after = answer.get().unwrap().get_items().unwrap();
+        assert_eq!(after.get(0).get_state().unwrap(), RequestState::Approved);
+
         nest(&items, leaf, mid).await;
         assert_eq!(read_ids!(items, parents_request, leaf), [mid]);
         assert_eq!(read_ids!(items, children_request, top), [mid]);

@@ -6,8 +6,8 @@
 //! asking and again when approving, under the write lock.
 //!
 //! What is and is not enforced: the approver is the repository's `actor` — whatever string the
-//! caller built the `GroupRepo` with. Nothing authenticates it here; the server in front must do
-//! that. It may approve if it holds `manage` on the parent by `may_do`, or, while the parent has no
+//! caller built the `GroupRepo` with. Nothing authenticates it, here or in `fs-groups-server` (the
+//! transport knows no caller yet, `DESIGN.md`), so this is a check of a name, not of a person. It may approve if it holds `manage` on the parent by `may_do`, or, while the parent has no
 //! delegation at all, if it is the one who created the parent. `grant` itself is not guarded yet,
 //! so anybody who can call it can give themselves `manage`.
 

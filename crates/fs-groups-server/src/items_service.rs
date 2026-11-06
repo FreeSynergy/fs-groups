@@ -9,11 +9,11 @@ use std::sync::Arc;
 use fs_groups_core::{Group, Groups};
 use fs_interfaces::Unsupported;
 use fs_interfaces::groups_capnp::items;
-use fs_interfaces::rpc::unsupported;
+use fs_interfaces::rpc::{run_to_end, unsupported};
 
 use crate::errors::rpc_error;
 use crate::nesting_service::{self as nesting, ADD_PARENT};
-use crate::wire::{read_flow, read_id, read_text, write_group, write_ids, write_page};
+use crate::wire::{read_flow, read_id, read_text, request, write_group, write_ids, write_page};
 
 pub(crate) struct ItemsImpl {
     pub(crate) groups: Arc<dyn Groups>,
@@ -41,7 +41,7 @@ impl items::Server for ItemsImpl {
         params: items::CreateParams,
         mut results: items::CreateResults,
     ) -> Done {
-        let p = params.get()?;
+        let p = request(params.get())?;
         let (name, kind) = (read_text(p.get_name())?, read_text(p.get_kind())?);
         let group = self.groups.create(name, kind).await.map_err(rpc_error)?;
         write_group(results.get().init_group(), &group)
@@ -52,7 +52,7 @@ impl items::Server for ItemsImpl {
         params: items::RenameParams,
         mut results: items::RenameResults,
     ) -> Done {
-        let p = params.get()?;
+        let p = request(params.get())?;
         let (id, name) = (read_id(p.get_id())?, read_text(p.get_name())?);
         let group = self.groups.rename(id, name).await.map_err(rpc_error)?;
         write_group(results.get().init_group(), &group)
@@ -63,7 +63,7 @@ impl items::Server for ItemsImpl {
         params: items::SetKindParams,
         mut results: items::SetKindResults,
     ) -> Done {
-        let p = params.get()?;
+        let p = request(params.get())?;
         let (id, kind) = (read_id(p.get_id())?, read_text(p.get_kind())?);
         let group = self.groups.set_kind(id, kind).await.map_err(rpc_error)?;
         write_group(results.get().init_group(), &group)
@@ -74,7 +74,7 @@ impl items::Server for ItemsImpl {
         params: items::SetRightFlowParams,
         mut results: items::SetRightFlowResults,
     ) -> Done {
-        let p = params.get()?;
+        let p = request(params.get())?;
         let (id, flow) = (read_id(p.get_id())?, read_flow(p.get_flow())?);
         let group = self
             .groups
@@ -85,12 +85,16 @@ impl items::Server for ItemsImpl {
     }
 
     async fn delete(self: Rc<Self>, params: items::DeleteParams, _: items::DeleteResults) -> Done {
-        let id = read_id(params.get()?.get_id())?;
-        self.groups.delete(id).await.map_err(rpc_error)
+        let id = read_id(request(params.get())?.get_id())?;
+        // A cascade of many steps: it finishes even if the client goes away (`run_to_end`).
+        let groups = self.groups.clone();
+        run_to_end(async move { groups.delete(id).await })
+            .await?
+            .map_err(rpc_error)
     }
 
     async fn get(self: Rc<Self>, params: items::GetParams, mut results: items::GetResults) -> Done {
-        let id = read_id(params.get()?.get_id())?;
+        let id = read_id(request(params.get())?.get_id())?;
         let found = self.groups.get(id).await.map_err(rpc_error)?;
         let mut r = results.get();
         r.set_found(found.is_some());
@@ -106,7 +110,11 @@ impl items::Server for ItemsImpl {
         mut results: items::ListResults,
     ) -> Done {
         let all = all_groups(self.groups.as_ref()).await?;
-        write_page(results.get().init_page(), all, params.get()?.get_cursor())
+        write_page(
+            results.get().init_page(),
+            all,
+            request(params.get())?.get_cursor(),
+        )
     }
 
     /// Superseded in the contract: a parent now has to consent.
@@ -139,7 +147,7 @@ impl items::Server for ItemsImpl {
         params: items::ApproveParentParams,
         results: items::ApproveParentResults,
     ) -> Done {
-        nesting::approve_parent(self.groups.as_ref(), params, results).await
+        nesting::approve_parent(self.groups.clone(), params, results).await
     }
 
     async fn decline_parent(
@@ -163,7 +171,7 @@ impl items::Server for ItemsImpl {
         params: items::ParentsParams,
         mut results: items::ParentsResults,
     ) -> Done {
-        let id = read_id(params.get()?.get_id())?;
+        let id = read_id(request(params.get())?.get_id())?;
         let ids = self.groups.parents(id).await.map_err(rpc_error)?;
         write_ids(&ids, |n| results.get().init_ids(n))
     }
@@ -173,7 +181,7 @@ impl items::Server for ItemsImpl {
         params: items::ChildrenParams,
         mut results: items::ChildrenResults,
     ) -> Done {
-        let id = read_id(params.get()?.get_id())?;
+        let id = read_id(request(params.get())?.get_id())?;
         let ids = self.groups.children(id).await.map_err(rpc_error)?;
         write_ids(&ids, |n| results.get().init_ids(n))
     }
@@ -183,7 +191,7 @@ impl items::Server for ItemsImpl {
         params: items::AncestorsParams,
         mut results: items::AncestorsResults,
     ) -> Done {
-        let id = read_id(params.get()?.get_id())?;
+        let id = read_id(request(params.get())?.get_id())?;
         let ids = self.groups.ancestors(id).await.map_err(rpc_error)?;
         write_ids(&ids, |n| results.get().init_ids(n))
     }
@@ -193,7 +201,7 @@ impl items::Server for ItemsImpl {
         params: items::DescendantsParams,
         mut results: items::DescendantsResults,
     ) -> Done {
-        let id = read_id(params.get()?.get_id())?;
+        let id = read_id(request(params.get())?.get_id())?;
         let ids = self.groups.descendants(id).await.map_err(rpc_error)?;
         write_ids(&ids, |n| results.get().init_ids(n))
     }
