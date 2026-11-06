@@ -6,12 +6,13 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fs_groups_core::{Group, Groups};
+use fs_groups_core::Groups;
 use fs_interfaces::Unsupported;
 use fs_interfaces::groups_capnp::items;
 use fs_interfaces::rpc::{run_to_end, unsupported};
 
 use crate::errors::rpc_error;
+use crate::list_all::all_groups;
 use crate::nesting_service::{self as nesting, ADD_PARENT};
 use crate::wire::{read_flow, read_id, read_text, request, write_group, write_ids, write_page};
 
@@ -20,20 +21,6 @@ pub(crate) struct ItemsImpl {
 }
 
 type Done = Result<(), capnp::Error>;
-
-/// The whole list through the provider's paging; the wire page is cut by weight afterwards.
-async fn all_groups(groups: &dyn Groups) -> Result<Vec<Group>, capnp::Error> {
-    let mut all = Vec::new();
-    let mut cursor = None;
-    loop {
-        let page = groups.list(cursor.as_ref()).await.map_err(rpc_error)?;
-        all.extend(page.items);
-        match page.next {
-            Some(next) => cursor = Some(next),
-            None => return Ok(all),
-        }
-    }
-}
 
 impl items::Server for ItemsImpl {
     async fn create(

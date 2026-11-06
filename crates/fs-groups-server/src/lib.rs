@@ -17,6 +17,7 @@ mod feed;
 mod groups_service;
 mod invitations_service;
 mod items_service;
+mod list_all;
 mod memberships_service;
 mod nesting_service;
 mod wire;
