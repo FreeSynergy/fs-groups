@@ -5,11 +5,12 @@
 
 mod plan;
 mod report;
+mod steps;
 mod sync;
 mod wanted;
 
 pub use plan::{Change, plan};
 pub use report::{Divergence, SyncReport};
+pub(crate) use steps::hold_still;
 pub use sync::Mirror;
-pub(crate) use sync::hold_still;
 pub use wanted::{Scope, Wanted};
