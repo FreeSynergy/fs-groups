@@ -26,7 +26,11 @@ pub(super) fn membership(o: &StoredObject) -> Option<Membership> {
         id: o.envelope.id,
         group: id_of(o, "group")?,
         member: member_of(o, "member_kind", "member")?,
-        role: one(o, "role").unwrap_or_default().to_string(),
+        // the index is what is searched; if it lost the role, the standard-shaped content still has it
+        role: one(o, "role")
+            .or_else(|| o.content.get("org:role")?.as_str())
+            .unwrap_or_default()
+            .to_string(),
         in_force: true,
     })
 }
@@ -47,7 +51,7 @@ pub(super) fn delegation(o: &StoredObject) -> Option<Delegation> {
         id: o.envelope.id,
         group: id_of(o, "group")?,
         holder: member_of(o, "holder_kind", "holder")?,
-        right: Right::parse(one(o, "right")?)?,
+        right: Right::parse(one(o, "right").or_else(|| o.content.get("fs:right")?.as_str())?)?,
         in_force: true,
     })
 }

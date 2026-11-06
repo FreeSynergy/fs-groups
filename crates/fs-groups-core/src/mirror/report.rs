@@ -25,8 +25,9 @@ pub struct SyncReport {
     pub unnested: Vec<(ObjectId, ObjectId)>,
     /// Groups applied except for these people, whom the directory could not map to an account.
     pub unmapped: Vec<(ObjectId, Vec<String>)>,
-    /// Stored groups and memberships that cannot be read. While there are any nobody is taken out
-    /// of a directory group (what is wanted may be short), and the run is not quiet.
+    /// Stored objects that cannot be read (a group, a membership, a delegation, or a group whose
+    /// type was changed). Where they touch a group nobody is taken out of it (what is wanted may be
+    /// short); revocations elsewhere go on. The run is not quiet.
     pub unreadable: Vec<ObjectId>,
     /// Groups on a loop (bad data from a second writer): their edges are written flat, never nested.
     pub looped: Vec<ObjectId>,
@@ -38,10 +39,10 @@ pub struct SyncReport {
     pub ledger_error: Option<String>,
 }
 
-/// A nested edge that goes to the directory as a flat list (provisional, see `right_flow`): the
-/// people of `group` are listed in `parent`, so there they get what `parent` holds, although
-/// `may_do` does not give it to them. Belonging is kept (nobody loses what `effective` says); the
-/// rights are the part that differs. Edges that are nested in the directory are not listed.
+/// An edge where the directory gives the people of `group` what `parent` holds, although `may_do`
+/// does not (provisional, see `right_flow`): they are listed in `parent`, flat or through a nested
+/// group. With the safe reading that is **every** edge, the nested ones too. Belonging is kept
+/// (nobody loses what `effective` says); the rights are the part that differs.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Divergence {
     /// The child group.

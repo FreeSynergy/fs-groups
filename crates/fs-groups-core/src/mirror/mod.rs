@@ -6,7 +6,10 @@
 mod plan;
 mod report;
 mod sync;
+mod wanted;
 
 pub use plan::{Change, plan};
 pub use report::{Divergence, SyncReport};
 pub use sync::Mirror;
+pub(crate) use sync::hold_still;
+pub use wanted::{Scope, Wanted};

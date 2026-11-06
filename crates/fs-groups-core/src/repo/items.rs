@@ -11,6 +11,12 @@ use super::handle::{GroupRepo, Writer};
 use crate::error::{Error, Result};
 use crate::model::{Cursor, Group, Member, Page, RightFlow};
 
+/// A stored group that cannot be read as a group, and its parents if they can still be told.
+pub(super) struct Unreadable {
+    pub id: ObjectId,
+    pub parents: Option<Vec<ObjectId>>,
+}
+
 impl GroupRepo {
     /// `group.create`: a new group with no parent. The name must not be blank.
     pub async fn create(&self, name: &str, kind: &str) -> Result<Group> {
@@ -74,8 +80,8 @@ impl GroupRepo {
         Ok(self.read_groups().await?.0)
     }
 
-    /// All groups in name order, and the ids of stored groups that cannot be read as a group.
-    pub(super) async fn read_groups(&self) -> Result<(Vec<Group>, Vec<ObjectId>)> {
+    /// All groups in name order, and the stored groups that cannot be read as a group.
+    pub(super) async fn read_groups(&self) -> Result<(Vec<Group>, Vec<Unreadable>)> {
         let q = Query::new()
             .of_type(GROUP_TYPE)
             .in_context(CONTEXT)
@@ -85,7 +91,15 @@ impl GroupRepo {
         for o in &found {
             match Group::from_content(o.envelope.id, &o.content) {
                 Some(g) => groups.push(g),
-                None => unreadable.push(o.envelope.id),
+                None => unreadable.push(Unreadable {
+                    id: o.envelope.id,
+                    // what can still be told about a group that cannot be read
+                    parents: o
+                        .content
+                        .get("fs:parents")
+                        .and_then(|v| v.as_array())
+                        .map(|a| a.iter().filter_map(|v| v.as_str()?.parse().ok()).collect()),
+                }),
             }
         }
         Ok((groups, unreadable))

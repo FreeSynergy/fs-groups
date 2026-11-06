@@ -29,7 +29,7 @@ impl GroupRepo {
                 return Err(Error::Conflict("a holder needs an IRI".into()));
             }
             Member::Person(p) => {
-                text::check("holder", p.trim())?;
+                text::check_person("holder", p.trim())?;
                 Member::Person(p.trim().into())
             }
             group_holder @ Member::Group(_) => group_holder,
@@ -111,7 +111,7 @@ impl GroupRepo {
             .collect();
         for d in &mut found {
             if let (Right::Manage, Member::Person(p)) = (d.right, &d.holder) {
-                d.in_force = self.is_known_human(p).await?;
+                d.in_force = self.is_known_human(p).await.unwrap_or(false);
             }
         }
         Ok(found)
@@ -126,7 +126,7 @@ impl GroupRepo {
     /// A failing read is an error, not a no. The graph is loaded once per call.
     pub async fn may_do(&self, group: ObjectId, person: &str, right: Right) -> Result<bool> {
         let person = person.trim();
-        text::check("person", person)?;
+        text::check_person("person", person)?;
         let groups = self.all_groups().await?;
         let graph = Graph::from_groups(&groups);
         if !graph.contains(group) {

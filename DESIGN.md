@@ -2,11 +2,11 @@
 
 `fs-groups` is the groups program of FreeSynergy. This repo holds the **program core** (`crates/fs-groups-core`, no GUI).
 A group is an **AS2 `Group`** in an envelope stored through `fs-store` (ADR 0014, 0020, 0050). It runs alone, without any
-directory (ADR 0024); a directory is only a mirror (ADR 0047). Contract: `groups.capnp` in `fs-interfaces` v0.30.0 (draft).
+directory (ADR 0024); a directory is only a mirror (ADR 0047). Contract: `groups.capnp` in `fs-interfaces` v0.31.0 (draft).
 
 ## State
 
-Version 0.2.0. **Several rules below are provisional: the owner is still answering what up and down mean and who consents to a nesting link.** No tag of this repo until he has.
+Version 0.2.0. **Several rules below are provisional: the owner is still answering what up and down mean and who consents to a nesting link.** A tag is fine as long as these points stay marked provisional.
 
 | Area | State |
 |---|---|
@@ -23,7 +23,7 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 | Right flow (ADR 0055 point 6): `Group.right_flow` (`None` default, `Down`, `Up`), `set_right_flow`, `fs:rightFlow` in the AS2 content (absent = `None`); **meaning provisional** | done |
 | Mirror option B (ADR 0056): nested only where child and parent both pass `Up` and nothing forbids it, else a flat list (the child's whole subtree); old nested form healed; `divergences` = **every** edge (the nested ones too) | done, **provisional** |
 | Agents never admin: `AiMarking` (injected), admin roles by configuration (folded), installer by configuration, text with invisible characters refused; no answer = refuse; also in the mirror (administrative groups list no agent or unknown) | done, **provisional, no authentication** |
-| Mirror hardening: ledger written before the directory (intent), tidied only when it changed; keyed by `directory_id`; while anything is unreadable nobody is taken out of a directory group and the run is not quiet; loops are never nested; a parent is applied only with the children the directory holds; one unmapped person does not block the group | done |
+| Mirror hardening: ledger written before the directory (intent), tidied only when it changed; keyed by `directory_id`; where an unreadable object touches a group nobody is taken out of it (an agent in an administrative group excepted), elsewhere revocations go on, and the run is not quiet; an unreadable delegation or membership makes the group it touches count as administrative (fail closed); loops are never nested; a parent is applied only with the children the directory holds; one unmapped person does not block the group | done |
 | One write path (`Writer` holds the lock), process-wide lock per store handle | done; **single-writer limit, see Decisions** |
 | `group.subscribe`, capnp-rpc server | **not built**; `capabilities()` says "not built yet; it is possible" |
 | Tests | see the final count in the commit message (`tests/*.rs` by feature, real in-memory `TursoStore`, forced interleavings with a slow backend) |
@@ -103,7 +103,7 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
   group is meant to pass on (`right_flow::directory_nests`: child and parent both pass `Up`) and nothing forbids it (a loop, or
   an administrative parent and an agent in the child's closure, see below). Every other child is not nested; the parent's
   **flat list** holds its own direct people plus the people of the child's whole subtree. So the directory's closure of a group
-  equals `effective`: nobody who belongs loses anything, and a person may be listed in a group directly because of a child.
+  equals `effective`, except that a group carrying an administrative right never lists an agent or an unknown person, so `effective` may name someone (an agent in an administrative group, or in a child below it) whom the directory does not list. Nobody else who belongs loses anything, and a person may be listed in a group directly because of a child.
   A change of setting or an edge removed is healed by the normal sync.
   **What remains in `SyncReport::divergences`: every edge, the nested ones too.** `may_do` gives a holder's right to direct
   members only, while the directory gives it to every member of a child, nested or listed flat. This over-grant is **open with
@@ -117,20 +117,32 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
   known to be a human (so the agent keeps what is below manage, and also loses `Manage` if marked later). An agent also cannot
   answer a parent request. This is only an answer: **nothing verifies who calls**, and a caller that wires no checker or a
   checker that always says human defeats it.
-  **Spelling.** Role ids and the configured admin roles are compared folded (trimmed, NFKC, case folded), so `" Owner "`, `OWNER`
-  and a fullwidth spelling are the admin role; control and invisible characters in a role, a person, an invitee or a holder are
-  refused at the input, and configuration with them (or an empty or padded installer) is refused. A role id that is not an admin
-  role stays an opaque string. The person is asked of the host in canonical spelling (trimmed, scheme and host in lower case, no
-  trailing slash). **`AiMarking` must answer `None` unless it knows the person**: `Some(false)` means "known to be human"; a thin
+  **Spelling and shape.** Role ids and the configured admin roles are compared folded (trimmed, case folded), so `" Owner "` and `OWNER`
+  are the admin role. **Role ids are ASCII only** (letters, digits and `- _ . : / # @ + ~ % =`): that refuses control, invisible and
+  look-alike characters by shape (a Cyrillic `о` in `оwner`), the smaller of the two options, at the price that a role id with an
+  umlaut is refused here. Persons, invitees, holders and the installer are made of letters and digits of any script and the ASCII
+  punctuation of an IRI: no whitespace, control or format character (look-alike letters of other scripts are not told apart; that
+  is for the host's identity rules). Configuration that breaks this, an empty admin role, or an empty or padded installer is
+  refused. A role id that is not an admin role stays an opaque string. **Without `with_admin_roles` no role counts as admin, so an
+  agent can be added with the role `owner`: naming the admin roles is the host's duty.** The person is asked of the host with
+  scheme and host in lower case and nothing else changed (the user part, path, query, fragment and a trailing slash are different
+  identities). **`AiMarking` must answer `None` unless it knows the person**: `Some(false)` means "known to be human"; a thin
   wrapper over `RoleBook::is_ai` (false for an id with no roles) turns unknown into human, see the trait doc for the adapter.
+  An agent may hold `AddMembers` or `RemoveMembers` (only `Manage` and admin roles are barred): ADR 0056 leaves that open.
   **In force.** `Membership::in_force` and `Delegation::in_force` are `false` for an admin role or `Manage` held by a person who
   is (now) an agent or not known to be human: the entry stays, but counts for nothing. An admin *role* alone grants no right
   (`may_do` stays false): it only bars agents; appoint an admin by granting `Manage`.
   **In the mirror.** A directory group *carries an administrative right* when it holds `Manage` on anything or a member has an
   admin role in it. Agents and unknowns are never written into such a group's list, direct or flat from a child, and a nested
   edge whose child closure holds one is written flat without them; they are named in `SyncReport::left_out`. A change of
-  status or marking heals at the next sync. No checker wired: everyone is unknown, so such a group gets no people. (While
-  something is unreadable, nobody is taken out; only the people named as left out are kept out.)
+  status or marking heals at the next sync. No checker wired: everyone is unknown, so such a group gets no people. **Fail closed:** an unreadable delegation (whose right may be `Manage`) makes its holder group count as administrative, all groups if
+  the holder cannot be told; an unreadable membership does the same for its group. Where an unreadable object touches a group (the
+  group, the groups above it, or all if that cannot be told) the sync keeps what the directory holds, but in an administrative group
+  it asks the checker about what is there, drops agents and unknowns (named in `left_out`) and keeps an old nested edge only if the
+  child's whole closure in the directory is known human. Revocations elsewhere go on. A stored object whose type changed is
+  never removed. **Order:** writes that take away go first (parents before children), then those that add (children first), so an
+  agent is never written to a child while an administrative parent still nests it; if that parent cannot be updated, the children
+  below it are held back and reported.
 * **The top admin is whoever installs (provisional).** `with_installer(identity)` is configuration only: `may_do` is true for that
   identity on every group that is not on a loop, if they are known not to be an agent. They appoint further admins by `grant`ing `Manage` (or an admin
   role); who may grant is not enforced. No authentication is built.
@@ -138,8 +150,8 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
   name) is a store object of type `MirrorLedger`. The ids are written **before** the directory is touched (a failure later
   loses nothing) and tidied after; an id leaves only when its group was removed or the directory confirms (`read`) it is not
   there, so a group `list` left out once is not forgotten. Two directories of one provider need different `directory_id`s:
-  **`fs-identity` must override it** (for example the Kanidm URL). Stored groups and memberships that cannot be read are listed in `SyncReport::unreadable` (not
-  quiet); while there are any, nobody is taken out of a directory group (what is wanted may be short) and an unreadable group
+  **`fs-identity` must override it** (for example the Kanidm URL). Stored groups, memberships and delegations that cannot be read are listed in `SyncReport::unreadable` (not
+  quiet); where they touch a group nobody is taken out of it (what is wanted may be short; see agents) and an unreadable group
   or membership can still be deleted. Groups on a loop (bad data from a second writer) are in `looped` and never nested. A
   repeat run does not rewrite the ledger. A missing `fs:kind` is tolerated. A parent is applied only with the children the
   directory holds (`unnested` lists the rest). A directory that cannot map a person applies the rest and answers
@@ -160,5 +172,5 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 
 ## Crates
 
-`fs-store` (git tag v0.2.0), `fs-interfaces` (git tag v0.30.0), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full).
+`fs-store` (git tag v0.2.0), `fs-interfaces` (git tag v0.31.0), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full).
 All MIT / Apache-2.0. No Kanidm dependency of any kind.

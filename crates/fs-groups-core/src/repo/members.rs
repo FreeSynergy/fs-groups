@@ -28,8 +28,8 @@ impl GroupRepo {
         if person.is_empty() {
             return Err(Error::Conflict("a member needs an IRI".into()));
         }
-        text::check("person", person)?;
-        text::check("role", role.trim())?;
+        text::check_person("person", person)?;
+        text::check_role("role", role.trim())?;
         let member = Member::Person(person.into());
         self.writer()
             .await
@@ -62,7 +62,8 @@ impl GroupRepo {
             .await?;
         for m in &mut found {
             if let (true, Member::Person(p)) = (self.is_admin_role(&m.role), &m.member) {
-                m.in_force = self.is_known_human(p).await?;
+                // a checker that fails must not block reads: the entry just does not show as in force
+                m.in_force = self.is_known_human(p).await.unwrap_or(false);
             }
         }
         Ok(found)

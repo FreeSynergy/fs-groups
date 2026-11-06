@@ -136,8 +136,9 @@ impl GroupRepo {
     {
         let mut folded = BTreeSet::new();
         for role in roles {
-            text::check("admin role", role.as_ref())?;
-            let f = text::fold(role.as_ref());
+            let role = role.as_ref().trim();
+            text::check_role("admin role", role)?;
+            let f = text::fold(role);
             if f.is_empty() {
                 return Err(Error::Conflict("an admin role id is empty".into()));
             }
@@ -152,7 +153,7 @@ impl GroupRepo {
     /// only compares the string it is asked about. Padded, empty or invisible text is refused.
     pub fn with_installer(mut self, installer: impl Into<String>) -> Result<Self> {
         let installer = installer.into();
-        text::check("installer", &installer)?;
+        text::check_person("installer", &installer)?;
         if installer.is_empty() || installer != installer.trim() {
             return Err(Error::Conflict(
                 "the installer identity must not be empty or padded".into(),

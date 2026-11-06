@@ -30,8 +30,8 @@ impl GroupRepo {
             return Err(Error::Conflict("an invitation needs an invitee".into()));
         }
         let (invitee, role) = (invitee.trim(), role.trim());
-        text::check("invitee", invitee)?;
-        text::check("role", role)?;
+        text::check_person("invitee", invitee)?;
+        text::check_role("role", role)?;
         let w = self.writer().await;
         let g = w.require(group).await?;
         let mut env = w.fresh_envelope(
@@ -107,7 +107,7 @@ impl GroupRepo {
         if person.is_empty() {
             return Err(Error::Conflict("an accepting person needs an IRI".into()));
         }
-        text::check("person", person)?;
+        text::check_person("person", person)?;
         let w = self.writer().await;
         let (o, inv) = w.invitation(id).await?;
         let next = inv.state.on(Step::Accept, inv.ran_out(now))?;

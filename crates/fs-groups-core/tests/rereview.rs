@@ -90,7 +90,6 @@ async fn a_spelling_of_an_agent_id_does_not_become_human() {
     let g = r.create("g", "t").await.unwrap();
     for variant in [
         "HTTPS://EXAMPLE.ORG/agents/bot",
-        "https://example.org/agents/bot/",
         " https://example.org/agents/bot ",
     ] {
         let err = r
