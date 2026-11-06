@@ -288,3 +288,56 @@ pub fn faulty_repo(
         .with_instance("example.org")
         .with_ai_marking(Agents::with(&[]))
 }
+
+/// A directory that records its whole state after every call, and refuses the applies it is told to.
+/// The intermediate states of a run can then be checked, not only the last one.
+#[derive(Default)]
+pub struct Recording {
+    pub groups: Mutex<BTreeMap<ObjectId, DirectoryGroup>>,
+    pub states: Mutex<Vec<BTreeMap<ObjectId, DirectoryGroup>>>,
+    pub refuse: Mutex<std::collections::BTreeSet<ObjectId>>,
+}
+
+impl Recording {
+    fn snapshot(&self) {
+        let now = self.groups.lock().unwrap().clone();
+        self.states.lock().unwrap().push(now);
+    }
+    /// The state before the run, then after each call of the run.
+    pub fn start(&self) {
+        self.states.lock().unwrap().clear();
+        self.snapshot();
+    }
+}
+
+#[async_trait]
+impl GroupDirectory for Recording {
+    fn capabilities(&self) -> Capabilities {
+        let mut c = Capabilities::new("recording");
+        c.supported("directory.apply").supported("directory.read");
+        c
+    }
+    async fn read(&self, id: ObjectId) -> Result<Option<DirectoryGroup>> {
+        Ok(self.groups.lock().unwrap().get(&id).cloned())
+    }
+    async fn list(&self) -> Result<Vec<DirectoryGroup>> {
+        Ok(self.groups.lock().unwrap().values().cloned().collect())
+    }
+    async fn apply(&self, g: &DirectoryGroup) -> Result<()> {
+        let refused = self.refuse.lock().unwrap().contains(&g.id);
+        if !refused {
+            self.groups.lock().unwrap().insert(g.id, g.clone().normalised());
+        }
+        self.snapshot();
+        if refused {
+            Err(Error::Directory("refused".into()))
+        } else {
+            Ok(())
+        }
+    }
+    async fn remove(&self, id: ObjectId) -> Result<()> {
+        self.groups.lock().unwrap().remove(&id);
+        self.snapshot();
+        Ok(())
+    }
+}
