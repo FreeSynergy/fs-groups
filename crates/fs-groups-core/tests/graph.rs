@@ -11,6 +11,7 @@ fn group(parents: &[ObjectId]) -> Group {
         name: id.to_string(),
         kind: String::new(),
         parents: parents.to_vec(),
+        right_flow: Default::default(),
     }
 }
 

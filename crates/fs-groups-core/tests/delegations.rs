@@ -3,7 +3,7 @@
 mod common;
 
 use common::{person, repo};
-use fs_groups_core::{Delegations, Error, Member, Right};
+use fs_groups_core::{Delegations, Error, Member, Right, RightFlow};
 
 #[tokio::test]
 async fn a_direct_right_answers_only_itself() {
@@ -51,7 +51,7 @@ async fn manage_implies_the_others() {
 }
 
 #[tokio::test]
-async fn a_right_held_by_a_group_counts_for_its_members_nested_ones_too() {
+async fn a_right_held_by_a_group_counts_for_its_members_nested_ones_when_it_passes_down() {
     let r = repo().await;
     let (club, board, inner) = (
         r.create("club", "t").await.unwrap(),
@@ -73,6 +73,13 @@ async fn a_right_held_by_a_group_counts_for_its_members_nested_ones_too() {
             .await
             .unwrap()
     );
+    // ADR 0055 point 6: by default a holder group's right reaches its direct members only
+    assert!(
+        !r.may_do(club.id, &person("deep"), Right::RemoveMembers)
+            .await
+            .unwrap()
+    );
+    r.set_right_flow(board.id, RightFlow::Down).await.unwrap();
     assert!(
         r.may_do(club.id, &person("deep"), Right::RemoveMembers)
             .await
@@ -121,7 +128,7 @@ async fn granting_twice_returns_the_first_and_revoking_ends_it() {
 }
 
 #[tokio::test]
-async fn a_right_on_a_parent_does_not_reach_the_child() {
+async fn a_right_on_a_parent_does_not_reach_the_child_by_default() {
     let r = repo().await;
     let (p, c) = (
         r.create("p", "t").await.unwrap(),

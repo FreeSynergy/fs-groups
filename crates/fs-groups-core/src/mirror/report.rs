@@ -17,6 +17,18 @@ pub struct SyncReport {
     pub removed: Vec<ObjectId>,
     /// Groups the directory refused, with its message. The next run tries again.
     pub failed: Vec<(ObjectId, String)>,
+    /// Nested edges the directory holds although the child's setting says otherwise; it cannot
+    /// express them. Reported, not adapted: what is applied stays as it is.
+    pub divergences: Vec<Divergence>,
+}
+
+/// A group whose right-flow setting the directory cannot express (provisional, see `right_flow`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Divergence {
+    /// The child group whose setting is not kept.
+    pub group: ObjectId,
+    /// The parent in the directory it is nested in, against its setting.
+    pub parent: ObjectId,
 }
 
 impl SyncReport {

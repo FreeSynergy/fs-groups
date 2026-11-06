@@ -1,8 +1,10 @@
 //! Delegations: grant, revoke, list, and the question `may_do`.
 //!
 //! Pattern: Repository + Specification — `Right::covers` decides whether a held right answers the
-//! asked one; a right held by a group counts for every person who belongs to it, nesting included.
+//! asked one; a right held by a group counts for its members as the group's right flow says (see `right_flow`).
 //! Nothing else enforces these rights yet (see `DESIGN.md`).
+
+use std::collections::BTreeSet;
 
 use fs_store::{ObjectId, Order, Query, StoredObject};
 use serde_json::json;
@@ -12,7 +14,9 @@ use super::consts::{AS2_TYPE, CONTEXT, DELEGATION_TYPE};
 use super::envelope::context;
 use super::handle::GroupRepo;
 use crate::error::{Error, Result};
+use crate::graph::Graph;
 use crate::model::{Delegation, Member, Right};
+use crate::right_flow;
 
 impl GroupRepo {
     /// `right.grant`: give a person or a group a right on `group`. Granting it twice returns the first.
@@ -91,20 +95,35 @@ impl GroupRepo {
             .collect())
     }
 
-    /// `right.read`: whether `person` holds `right` on `group`: directly, or through a group they belong
-    /// to (nested groups count). `Manage` answers every right.
+    /// `right.read`: whether `person` holds `right` on `group`. A delegation counts on `group` if it sits
+    /// on `group`, or on a group whose right flow reaches it; it counts for a person who is the holder,
+    /// or a direct member of the holder group or of a group the holder's right flow reaches
+    /// (see `right_flow`, provisional). `Manage` answers every right.
     pub async fn may_do(&self, group: ObjectId, person: &str, right: Right) -> Result<bool> {
-        let held = self.delegations(group).await?;
-        if held.iter().all(|d| !d.right.covers(right)) {
-            return Ok(false);
+        self.require(group).await?;
+        let groups = self.all_groups().await?;
+        let graph = Graph::from_groups(&groups);
+        let flows = right_flow::settings(&groups);
+        let q = Query::new()
+            .with_index("member_kind", "person")
+            .with_index("member", person);
+        let mine: BTreeSet<_> = self.memberships(q).await?.iter().map(|m| m.group).collect();
+        for source in right_flow::sources(&graph, &flows, group) {
+            for d in self.delegations(source).await? {
+                if !d.right.covers(right) {
+                    continue;
+                }
+                let held = match &d.holder {
+                    Member::Person(p) => p == person,
+                    Member::Group(h) => right_flow::reach(&graph, &flows, *h)
+                        .iter()
+                        .any(|g| mine.contains(g)),
+                };
+                if held {
+                    return Ok(true);
+                }
+            }
         }
-        let mine = self.groups_of(person).await?;
-        Ok(held
-            .iter()
-            .filter(|d| d.right.covers(right))
-            .any(|d| match &d.holder {
-                Member::Person(p) => p == person,
-                Member::Group(h) => mine.contains(h),
-            }))
+        Ok(false)
     }
 }

@@ -533,8 +533,8 @@ dependencies = [
 
 [[package]]
 name = "fs-interfaces"
-version = "0.5.0"
-source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.5.0#a3573feb6e858423d2ad93bacd21b73c57355b4a"
+version = "0.7.0"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.7.0#8361c82cecb3c91a7ff2dacab7893d75a229d25e"
 dependencies = [
  "capnp",
 ]

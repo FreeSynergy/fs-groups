@@ -8,7 +8,7 @@ use fs_store::{ObjectId, Order, Query};
 use super::consts::{CONTEXT, GROUP_TYPE};
 use super::handle::GroupRepo;
 use crate::error::{Error, Result};
-use crate::model::{Cursor, Group, Member, Page};
+use crate::model::{Cursor, Group, Member, Page, RightFlow};
 
 impl GroupRepo {
     /// `group.create`: a new group with no parent. The name must not be blank.
@@ -55,6 +55,14 @@ impl GroupRepo {
     pub async fn set_kind(&self, id: ObjectId, kind: &str) -> Result<Group> {
         let mut g = self.require(id).await?;
         g.kind = kind.trim().into();
+        self.save(&g).await?;
+        Ok(g)
+    }
+
+    /// `group.update`: set whether and where the group passes its rights on.
+    pub async fn set_right_flow(&self, id: ObjectId, flow: RightFlow) -> Result<Group> {
+        let mut g = self.require(id).await?;
+        g.right_flow = flow;
         self.save(&g).await?;
         Ok(g)
     }

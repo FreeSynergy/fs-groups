@@ -60,6 +60,7 @@ impl GroupRepo {
             name: name.into(),
             kind: kind.into(),
             parents: vec![],
+            right_flow: crate::model::RightFlow::default(),
         }
     }
 }

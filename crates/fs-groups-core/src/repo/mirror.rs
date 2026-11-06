@@ -13,8 +13,9 @@ use super::consts::{AS2_TYPE, CONTEXT, LEDGER_TYPE};
 use super::envelope::context;
 use super::handle::GroupRepo;
 use crate::error::Result;
-use crate::mirror::Mirror;
+use crate::mirror::{Divergence, Mirror};
 use crate::model::Member;
+use crate::right_flow;
 use crate::traits::DirectoryGroup;
 
 impl GroupRepo {
@@ -55,6 +56,23 @@ impl Mirror for GroupRepo {
                 .normalised(),
             );
         }
+        Ok(out)
+    }
+
+    async fn divergences(&self) -> Result<Vec<Divergence>> {
+        let groups = self.all_groups().await?;
+        let graph = crate::graph::Graph::from_groups(&groups);
+        let mut out: Vec<_> = groups
+            .iter()
+            .filter(|g| !right_flow::directory_expresses(g.right_flow))
+            .flat_map(|g| {
+                graph.parents(g.id).iter().map(|p| Divergence {
+                    group: g.id,
+                    parent: *p,
+                })
+            })
+            .collect();
+        out.sort_by_key(|d| (d.group, d.parent));
         Ok(out)
     }
 

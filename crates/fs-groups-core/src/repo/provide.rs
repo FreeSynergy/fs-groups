@@ -11,6 +11,7 @@ use super::handle::GroupRepo;
 use crate::error::Result;
 use crate::model::{
     Cursor, Delegation, EffectiveMember, Group, Invitation, Member, Membership, Page, Right,
+    RightFlow,
 };
 use crate::traits::{Delegations, Groups, Invitations, Memberships};
 
@@ -39,6 +40,9 @@ impl Groups for GroupRepo {
     }
     async fn set_kind(&self, id: ObjectId, kind: &str) -> Result<Group> {
         GroupRepo::set_kind(self, id, kind).await
+    }
+    async fn set_right_flow(&self, id: ObjectId, flow: RightFlow) -> Result<Group> {
+        GroupRepo::set_right_flow(self, id, flow).await
     }
     async fn delete(&self, id: ObjectId) -> Result<()> {
         GroupRepo::delete(self, id).await

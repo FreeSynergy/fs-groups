@@ -24,16 +24,17 @@ mod invitation_state;
 pub mod mirror;
 pub mod model;
 mod repo;
+pub mod right_flow;
 pub mod traits;
 mod unsupported;
 
 pub use error::{Error, Result};
 pub use graph::Graph;
 pub use invitation_state::Step;
-pub use mirror::{Change, Mirror, SyncReport, plan};
+pub use mirror::{Change, Divergence, Mirror, SyncReport, plan};
 pub use model::{
     Cursor, Delegation, EffectiveMember, Group, Invitation, InvitationState, Member, Membership,
-    Page, Right,
+    Page, Right, RightFlow,
 };
 pub use repo::{CONTEXT, DELEGATION_TYPE, GROUP_TYPE, GroupRepo, INVITATION_TYPE, MEMBERSHIP_TYPE};
 pub use traits::{Delegations, DirectoryGroup, GroupDirectory, Groups, Invitations, Memberships};

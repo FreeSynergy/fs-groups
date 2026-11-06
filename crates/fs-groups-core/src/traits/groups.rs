@@ -11,7 +11,7 @@ use fs_store::ObjectId;
 
 use super::walk::walk;
 use crate::error::Result;
-use crate::model::{Cursor, Group, Page};
+use crate::model::{Cursor, Group, Page, RightFlow};
 use crate::unsupported::not_possible;
 
 /// Groups and their nesting. Interface status: draft (ADR 0045).
@@ -38,6 +38,10 @@ pub trait Groups: Send + Sync {
     }
     /// `group.update`: change the kind.
     async fn set_kind(&self, _id: ObjectId, _kind: &str) -> Result<Group> {
+        not_possible("group.update")
+    }
+    /// `group.update`: set whether and where the group passes its rights on.
+    async fn set_right_flow(&self, _id: ObjectId, _flow: RightFlow) -> Result<Group> {
         not_possible("group.update")
     }
     /// `group.delete`: remove a group with its memberships, invitations, delegations and links.

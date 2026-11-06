@@ -6,6 +6,8 @@
 use fs_store::ObjectId;
 use serde_json::{Value, json};
 
+use super::RightFlow;
+
 /// Namespace of the members this program adds to AS2.
 pub const NS: &str = "https://freesynergy.net/ns#";
 
@@ -22,6 +24,8 @@ pub struct Group {
     pub kind: String,
     /// Direct parents; a group may have several. Never contains a cycle.
     pub parents: Vec<ObjectId>,
+    /// Whether and where this group passes its rights on; `None` when unset.
+    pub right_flow: RightFlow,
 }
 
 impl Group {
@@ -34,6 +38,7 @@ impl Group {
             "name": self.name,
             "fs:kind": self.kind,
             "fs:parents": self.parents.iter().map(ToString::to_string).collect::<Vec<_>>(),
+            "fs:rightFlow": self.right_flow.as_str(),
         })
     }
 
@@ -52,6 +57,10 @@ impl Group {
             name: text("name")?,
             kind: text("fs:kind")?,
             parents,
+            // An object written before the setting existed has none: it passes nothing on.
+            right_flow: text("fs:rightFlow")
+                .and_then(|s| RightFlow::parse(&s))
+                .unwrap_or_default(),
         })
     }
 }

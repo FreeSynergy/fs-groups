@@ -8,5 +8,5 @@ mod report;
 mod sync;
 
 pub use plan::{Change, plan};
-pub use report::SyncReport;
+pub use report::{Divergence, SyncReport};
 pub use sync::Mirror;

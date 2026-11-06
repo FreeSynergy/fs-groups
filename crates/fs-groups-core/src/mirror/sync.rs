@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use fs_store::ObjectId;
 
 use super::plan::{Change, plan};
-use super::report::SyncReport;
+use super::report::{Divergence, SyncReport};
 use crate::error::Result;
 use crate::traits::{DirectoryGroup, GroupDirectory};
 
@@ -20,6 +20,11 @@ pub trait Mirror: Send + Sync {
     async fn desired(&self) -> Result<Vec<DirectoryGroup>>;
     /// The group ids we have put into the directory named `directory` before.
     async fn mirrored(&self, directory: &str) -> Result<BTreeSet<ObjectId>>;
+    /// The nested edges of `desired` that the directory cannot hold as the groups' settings say.
+    /// Only reported by `sync_to`; nothing is changed because of them. Default: none.
+    async fn divergences(&self) -> Result<Vec<Divergence>> {
+        Ok(vec![])
+    }
     /// Remember which ids are in the directory now.
     async fn remember(&self, directory: &str, ids: &BTreeSet<ObjectId>) -> Result<()>;
 
@@ -36,7 +41,10 @@ pub trait Mirror: Send + Sync {
         let wanted: BTreeSet<_> = desired.iter().map(|g| g.id).collect();
         let mut known = self.mirrored(&name).await?;
         let mut stuck = BTreeSet::new();
-        let mut report = SyncReport::default();
+        let mut report = SyncReport {
+            divergences: self.divergences().await?,
+            ..SyncReport::default()
+        };
         for step in plan(&desired, &directory.list().await?, &known) {
             match step {
                 Change::Keep(id) => {
