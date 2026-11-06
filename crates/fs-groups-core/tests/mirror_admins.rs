@@ -138,7 +138,7 @@ async fn a_nested_edge_that_would_bring_an_agent_is_written_flat_without_them() 
     let report = r.sync_to(&dir).await.unwrap();
     assert!(dir.get(p.id).unwrap().nested.is_empty(), "healed to flat");
     assert_eq!(dir.get(p.id).unwrap().members, [person("ada")]);
-    assert!(!closure(&dir, p.id).contains(&BOT.to_string()));
+    assert!(!closure(&dir, p.id).contains(BOT));
     assert_eq!(report.left_out, [(p.id, vec![BOT.to_string()])]);
 }
 

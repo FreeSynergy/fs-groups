@@ -85,7 +85,6 @@ fn an_edge_matches_may_do_exactly_when_the_child_is_a_recipient_and_nests_when_b
                 group(ids[i], flows[rng.next(3)], parents)
             })
             .collect();
-        let graph = Graph::from_groups(&groups);
         let settings: BTreeMap<_, _> = groups.iter().map(|g| (g.id, g.right_flow)).collect();
         for g in &groups {
             for p in &g.parents {
