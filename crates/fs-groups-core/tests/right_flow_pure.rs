@@ -66,11 +66,11 @@ fn reach_and_sources_of_an_unknown_group_are_empty() {
     let id = ObjectId::new();
     assert!(reach(&g, &s, id).is_empty());
     assert!(sources(&g, &s, id).is_empty());
-    assert!(fs_groups_core::right_flow::recipients(&g, &s, id).is_empty());
+    assert!(fs_groups_core::right_flow::recipients(&s, id).is_empty());
 }
 
 #[test]
-fn a_nested_edge_is_expressible_exactly_when_the_child_is_a_recipient_of_the_parent() {
+fn an_edge_matches_may_do_exactly_when_the_child_is_a_recipient_and_nests_when_both_pass_up() {
     let mut rng = Lcg(11);
     let flows = [RightFlow::None, RightFlow::Down, RightFlow::Up];
     for _ in 0..200 {
@@ -90,10 +90,18 @@ fn a_nested_edge_is_expressible_exactly_when_the_child_is_a_recipient_of_the_par
         for g in &groups {
             for p in &g.parents {
                 let receives =
-                    fs_groups_core::right_flow::recipients(&graph, &settings, *p).contains(&g.id);
+                    fs_groups_core::right_flow::recipients(&settings, *p).contains(&g.id);
                 assert_eq!(
                     fs_groups_core::right_flow::directory_expresses(&settings, g.id, *p),
                     receives
+                );
+                assert!(
+                    !receives,
+                    "direct members only: no child is ever a recipient"
+                );
+                assert_eq!(
+                    fs_groups_core::right_flow::directory_nests(&settings, g.id, *p),
+                    g.right_flow == RightFlow::Up && settings[p] == RightFlow::Up
                 );
             }
         }

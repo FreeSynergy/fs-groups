@@ -529,6 +529,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "unicode-normalization",
 ]
 
 [[package]]

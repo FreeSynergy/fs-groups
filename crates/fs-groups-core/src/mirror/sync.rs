@@ -4,7 +4,7 @@
 //! remove, tidy the ledger);
 //! what differs per program is only the small steps a provider implements.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use async_trait::async_trait;
 use fs_store::ObjectId;
@@ -21,12 +21,21 @@ pub trait Mirror: Send + Sync {
     async fn desired(&self) -> Result<Vec<DirectoryGroup>>;
     /// The group ids we have put into the directory identified by `directory` before.
     async fn mirrored(&self, directory: &str) -> Result<BTreeSet<ObjectId>>;
-    /// Stored groups that cannot be read, so they are not in `desired`. They are never removed from
-    /// a directory because of that. Default: none.
+    /// Stored groups and memberships that cannot be read, so `desired` may be missing people or
+    /// groups. While there are any, `sync_to` removes nobody from a directory group. Default: none.
     async fn unreadable(&self) -> Result<Vec<ObjectId>> {
         Ok(vec![])
     }
-    /// The nested edges of `desired` where the directory gives more than the groups' rights do.
+    /// Groups on a loop (bad data from a second writer); their edges are never nested. Default: none.
+    async fn looped(&self) -> Result<Vec<ObjectId>> {
+        Ok(vec![])
+    }
+    /// `(group, people)` that `desired` leaves out of a group that carries an administrative right,
+    /// because they are agents or not known to be human (ADR 0056). Default: none.
+    async fn left_out(&self) -> Result<Vec<(ObjectId, Vec<String>)>> {
+        Ok(vec![])
+    }
+    /// The edges of `desired` where the directory gives the child's people more than `may_do`.
     /// Only reported by `sync_to`; nothing is changed because of them. Default: none.
     async fn divergences(&self) -> Result<Vec<Divergence>> {
         Ok(vec![])
@@ -54,12 +63,17 @@ pub trait Mirror: Send + Sync {
         let known = self.mirrored(&name).await?;
         let mut ledger = known.clone();
         ledger.extend(wanted.iter().copied());
+        let mut written = known.clone();
         if ledger != known {
             self.remember(&name, &ledger).await?;
+            written.clone_from(&ledger);
         }
+        let left_out = self.left_out().await?;
         let mut report = SyncReport {
             divergences: self.divergences().await?,
             unreadable: unreadable.clone(),
+            looped: self.looped().await?,
+            left_out: left_out.clone(),
             ..SyncReport::default()
         };
         let mut current = directory.list().await?;
@@ -84,12 +98,31 @@ pub trait Mirror: Send + Sync {
             .copied()
             .collect();
         let mut present: BTreeSet<_> = current.iter().map(|g| g.id).collect();
+        let there: BTreeMap<_, _> = current
+            .iter()
+            .map(|g| (g.id, g.clone().normalised()))
+            .collect();
+        let keep_extra = !unreadable.is_empty();
         let mut removed = BTreeSet::new();
         for step in plan(&desired, &current, &removable) {
             match step {
                 Change::Keep(id) => report.unchanged.push(id),
                 Change::Create(g) => put(directory, g, true, &mut present, &mut report).await,
-                Change::Update(g) => put(directory, g, false, &mut present, &mut report).await,
+                Change::Update(g) => {
+                    let g = if keep_extra {
+                        // something cannot be read, so the wanted list may be short: take nobody out
+                        let skipped = left_out.iter().find(|(id, _)| *id == g.id);
+                        let now = there.get(&g.id).cloned();
+                        keep_what_is_there(g, now.as_ref(), skipped.map(|(_, p)| p.as_slice()))
+                    } else {
+                        g
+                    };
+                    if there.get(&g.id) == Some(&g.clone().normalised()) {
+                        report.unchanged.push(g.id);
+                    } else {
+                        put(directory, g, false, &mut present, &mut report).await;
+                    }
+                }
                 Change::Remove(id) => match directory.remove(id).await {
                     Ok(()) => {
                         removed.insert(id);
@@ -100,8 +133,10 @@ pub trait Mirror: Send + Sync {
             }
         }
         ledger.retain(|id| !removed.contains(id) && !gone.contains(id));
-        if let Err(e) = self.remember(&name, &ledger).await {
-            report.ledger_error = Some(e.to_string());
+        if ledger != written {
+            if let Err(e) = self.remember(&name, &ledger).await {
+                report.ledger_error = Some(e.to_string());
+            }
         }
         Ok(report)
     }
@@ -140,4 +175,22 @@ async fn put(
             report.updated.push(group.id);
         }
     }
+}
+
+/// `wanted` plus what the directory holds now, except the people that must stay out.
+fn keep_what_is_there(
+    mut wanted: DirectoryGroup,
+    now: Option<&DirectoryGroup>,
+    never: Option<&[String]>,
+) -> DirectoryGroup {
+    if let Some(now) = now {
+        wanted.members.extend(
+            now.members
+                .iter()
+                .filter(|p| !never.is_some_and(|n| n.contains(p)))
+                .cloned(),
+        );
+        wanted.nested.extend(now.nested.iter().copied());
+    }
+    wanted.normalised()
 }

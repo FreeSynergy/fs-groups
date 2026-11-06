@@ -84,12 +84,32 @@ async fn a_ledger_that_fails_after_the_run_loses_nothing() {
     let g = flaky.create("g", "team").await.unwrap();
     let dir = FakeDirectory::default();
     let report = flaky.sync_to(&dir).await.unwrap();
+    assert_eq!(report.created, [g.id]);
+    assert!(
+        report.ledger_error.is_none(),
+        "the intent is all that is needed"
+    );
+    // the group goes away: removed from the directory, but the tidy-up of the ledger fails
+    flaky.delete(g.id).await.unwrap();
+    let report = flaky.sync_to(&dir).await.unwrap();
+    assert_eq!(report.removed, [g.id], "the report is not lost");
     assert!(report.ledger_error.is_some());
-    assert_eq!(report.created, [g.id], "the report is not lost");
-    // the group is gone here; the ledger still knows it was put there
-    r.delete(g.id).await.unwrap();
-    assert_eq!(r.sync_to(&dir).await.unwrap().removed, [g.id]);
     assert_eq!(dir.len(), 0);
+    // the ledger still names it; a later run with a working ledger tidies up and removes nothing twice
+    assert!(
+        r.mirrored(&dir.directory_id_for_test())
+            .await
+            .unwrap()
+            .contains(&g.id)
+    );
+    let report = r.sync_to(&dir).await.unwrap();
+    assert!(report.removed.is_empty() && report.ledger_error.is_none());
+    assert!(
+        r.mirrored(&dir.directory_id_for_test())
+            .await
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[tokio::test]

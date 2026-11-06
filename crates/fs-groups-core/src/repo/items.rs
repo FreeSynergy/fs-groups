@@ -117,7 +117,13 @@ impl GroupRepo {
     /// it holds) and its links to parents and children. Children stay.
     pub async fn delete(&self, id: ObjectId) -> Result<()> {
         let w = self.writer().await;
-        w.require(id).await?;
+        // a stored group that cannot be read as a group can still be deleted
+        let stored = w.load(id).await?.is_some_and(|o| {
+            o.envelope.object_type == GROUP_TYPE && o.envelope.context.as_deref() == Some(CONTEXT)
+        });
+        if !stored {
+            return Err(Error::NotFound { what: "group", id });
+        }
         let mut depending = vec![];
         for key in ["group", "child", "parent_of"] {
             let q = Query::new()

@@ -59,4 +59,7 @@ pub struct Delegation {
     pub holder: Member,
     /// The right.
     pub right: Right,
+    /// `false` for `Manage` held by a person who is an agent or not known to be a human (ADR 0056):
+    /// the entry stays on record but `may_do` does not count it. Always `true` otherwise.
+    pub in_force: bool,
 }

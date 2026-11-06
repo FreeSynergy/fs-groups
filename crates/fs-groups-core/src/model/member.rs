@@ -51,6 +51,10 @@ pub struct Membership {
     pub member: Member,
     /// Role id of `people.capnp`, opaque here; empty = plain member.
     pub role: String,
+    /// `false` when the role is a configured admin role and the person is an agent or not known to
+    /// be a human (ADR 0056): the entry stays on record but counts for nothing. Always `true` for
+    /// other roles.
+    pub in_force: bool,
 }
 
 /// A person who belongs to a group, and through whom.

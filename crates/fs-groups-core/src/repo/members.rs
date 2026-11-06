@@ -12,6 +12,7 @@ use super::envelope::{context, with_nonempty};
 use super::handle::{GroupRepo, Writer};
 use crate::error::{Error, Result};
 use crate::model::{Member, Membership};
+use crate::text;
 
 impl GroupRepo {
     /// `member.add`: add a person with a role (empty = plain member). Nesting groups is done with
@@ -27,6 +28,8 @@ impl GroupRepo {
         if person.is_empty() {
             return Err(Error::Conflict("a member needs an IRI".into()));
         }
+        text::check("person", person)?;
+        text::check("role", role.trim())?;
         let member = Member::Person(person.into());
         self.writer()
             .await
@@ -38,10 +41,11 @@ impl GroupRepo {
     pub async fn remove(&self, membership: ObjectId) -> Result<()> {
         let w = self.writer().await;
         let found = w.load(membership).await?;
-        if found
-            .as_ref()
-            .is_none_or(|o| codec::membership(o).is_none())
-        {
+        // an unreadable membership can be ended too, or it could never be cleaned up
+        if found.as_ref().is_none_or(|o| {
+            o.envelope.object_type != MEMBERSHIP_TYPE
+                || o.envelope.context.as_deref() != Some(CONTEXT)
+        }) {
             return Err(Error::NotFound {
                 what: "membership",
                 id: membership,
@@ -53,8 +57,15 @@ impl GroupRepo {
     /// `member.read`: the direct memberships of a group, in the order they were made.
     pub async fn direct(&self, group: ObjectId) -> Result<Vec<Membership>> {
         self.require(group).await?;
-        self.memberships(Query::new().with_index("group", group.to_string()))
-            .await
+        let mut found = self
+            .memberships(Query::new().with_index("group", group.to_string()))
+            .await?;
+        for m in &mut found {
+            if let (true, Member::Person(p)) = (self.is_admin_role(&m.role), &m.member) {
+                m.in_force = self.is_known_human(p).await?;
+            }
+        }
+        Ok(found)
     }
 
     /// Memberships matching `q` (type and context are added), oldest first.
@@ -115,6 +126,7 @@ impl Writer<'_> {
             group,
             member,
             role: role.into(),
+            in_force: true,
         })
     }
 }

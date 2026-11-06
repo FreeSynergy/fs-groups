@@ -36,19 +36,8 @@ fn listed(dir: &FakeDirectory, id: ObjectId) -> BTreeSet<String> {
     dir.get(id).unwrap().members.into_iter().collect()
 }
 
-/// The groups in `id`'s nested closure in the directory, `id` included.
-fn nested_groups(dir: &FakeDirectory, id: ObjectId) -> BTreeSet<ObjectId> {
-    let (mut seen, mut todo) = (BTreeSet::new(), vec![id]);
-    while let Some(cur) = todo.pop() {
-        if let Some(g) = dir.get(cur).filter(|_| seen.insert(cur)) {
-            todo.extend(g.nested);
-        }
-    }
-    seen
-}
-
-/// Nobody is lost, and nobody who reaches a group through nesting gets more than `may_do` gives,
-/// except the people a flat list put into some group on the way (their edge is in the divergence list).
+/// Nobody who belongs is lost, and nobody who does not belong is added: the directory's closure of a
+/// group is what `effective` says.
 async fn check_all(r: &GroupRepo, dir: &FakeDirectory, groups: &[&Group]) {
     for g in groups {
         let effective: BTreeSet<_> = r
@@ -64,30 +53,6 @@ async fn check_all(r: &GroupRepo, dir: &FakeDirectory, groups: &[&Group]) {
             "{} loses or gains someone",
             g.name
         );
-        let mut flat_extras = BTreeSet::new();
-        for h in nested_groups(dir, g.id) {
-            let direct: BTreeSet<_> = r
-                .direct(h)
-                .await
-                .unwrap()
-                .into_iter()
-                .map(|m| m.member.key())
-                .collect();
-            flat_extras.extend(listed(dir, h).difference(&direct).cloned());
-        }
-        // a right held by this group, placed on a group of its own
-        let target = r.create("target", "t").await.unwrap();
-        r.grant(target.id, Member::Group(g.id), Right::Read)
-            .await
-            .unwrap();
-        for who in closure(dir, g.id).difference(&listed(dir, g.id)) {
-            assert!(
-                r.may_do(target.id, who, Right::Read).await.unwrap() || flat_extras.contains(who),
-                "{who} reaches {} through nesting but may_do says no",
-                g.name
-            );
-        }
-        r.delete(target.id).await.unwrap();
     }
 }
 
@@ -273,22 +238,40 @@ async fn a_person_in_two_children_is_listed_once_and_a_second_run_writes_nothing
 }
 
 #[tokio::test]
-async fn what_remains_in_the_divergence_list_is_the_flat_edges() {
+async fn every_edge_is_a_divergence_the_nested_ones_too() {
     let r = repo().await;
     let p = mk(&r, "p", RightFlow::Up).await;
     let (nested, flat) = (
         mk(&r, "nested", RightFlow::Up).await,
         mk(&r, "flat", RightFlow::None).await,
     );
+    put(&r, &nested, "n").await;
     link(&r, nested.id, p.id).await;
     link(&r, flat.id, p.id).await;
-    let report = r.sync_to(&FakeDirectory::default()).await.unwrap();
-    // a flat edge gives the child's people the parent's rights in the directory, which may_do does not
-    assert_eq!(
-        report.divergences,
-        vec![Divergence {
+    let dir = FakeDirectory::default();
+    let report = r.sync_to(&dir).await.unwrap();
+    assert_eq!(dir.get(p.id).unwrap().nested, [nested.id]);
+    let mut want = vec![
+        Divergence {
+            group: nested.id,
+            parent: p.id,
+        },
+        Divergence {
             group: flat.id,
-            parent: p.id
-        }]
+            parent: p.id,
+        },
+    ];
+    want.sort_by_key(|d| (d.group, d.parent));
+    assert_eq!(report.divergences, want);
+    // the directory makes n a member of p; may_do does not (direct members only)
+    assert!(closure(&dir, p.id).contains(&person("n")));
+    let target = r.create("target", "t").await.unwrap();
+    r.grant(target.id, Member::Group(p.id), Right::Read)
+        .await
+        .unwrap();
+    assert!(
+        !r.may_do(target.id, &person("n"), Right::Read)
+            .await
+            .unwrap()
     );
 }

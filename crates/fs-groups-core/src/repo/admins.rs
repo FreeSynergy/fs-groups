@@ -6,29 +6,31 @@
 
 use super::handle::GroupRepo;
 use crate::error::{Error, Result};
+use crate::text;
 
 impl GroupRepo {
-    /// Whether `role` counts as admin.
+    /// Whether `role` counts as admin: its folded form is one of the configured roles.
     pub(super) fn is_admin_role(&self, role: &str) -> bool {
-        self.admin_roles.contains(role)
+        self.admin_roles.contains(&text::fold(role))
+    }
+
+    /// The host's answer for `person`, asked in canonical spelling. `None`: no answer, or no checker.
+    async fn ai_answer(&self, person: &str) -> Result<Option<bool>> {
+        match &self.ai {
+            None => Ok(None),
+            Some(ai) => ai.is_ai(&text::canonical_person(person)).await,
+        }
     }
 
     /// Whether `person` is known to be a human. `false` for an agent, for no answer, and when no
     /// checker is wired. A failing checker is an error.
     pub(super) async fn is_known_human(&self, person: &str) -> Result<bool> {
-        match &self.ai {
-            None => Ok(false),
-            Some(ai) => Ok(ai.is_ai(person).await? == Some(false)),
-        }
+        Ok(self.ai_answer(person).await? == Some(false))
     }
 
     /// Refuse an admin right for `person` unless they are known to be a human.
     pub(super) async fn require_human(&self, person: &str, what: &str) -> Result<()> {
-        let answer = match &self.ai {
-            None => None,
-            Some(ai) => ai.is_ai(person).await?,
-        };
-        match answer {
+        match self.ai_answer(person).await? {
             Some(false) => Ok(()),
             Some(true) => Err(Error::AgentNotAdmin(format!(
                 "{person} is marked as an agent ({what})"

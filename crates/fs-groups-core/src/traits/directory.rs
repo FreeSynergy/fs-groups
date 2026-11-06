@@ -17,9 +17,11 @@ pub struct DirectoryGroup {
     pub id: ObjectId,
     /// Display name.
     pub name: String,
-    /// Direct people, as the IRIs fs-groups holds.
+    /// The people listed in this group, as the IRIs fs-groups holds: its direct people and, for a
+    /// child that is not nested (option B, ADR 0056), the people of that child's whole subtree. A
+    /// group that carries an administrative right never lists an agent or an unknown person.
     pub members: Vec<String>,
-    /// Direct groups (children).
+    /// The child groups nested in this one: only where both pass `Up` and nothing forbids it.
     pub nested: Vec<ObjectId>,
 }
 

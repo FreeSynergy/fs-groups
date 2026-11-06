@@ -19,7 +19,8 @@ async fn a_variant_of_an_admin_role_is_still_admin() {
         let (r, _) = setup().await;
         let r = r
             .with_ai_marking(Agents::with(&[BOT]))
-            .with_admin_roles([configured]);
+            .with_admin_roles([configured])
+            .unwrap();
         let g = r.create("g", "t").await.unwrap();
         for given in ["owner", "OWNER", "Owner", " owner ", "\u{ff2f}wner"] {
             let err = r.add(g.id, Member::Person(BOT.into()), given).await;
@@ -39,12 +40,30 @@ async fn a_variant_of_an_admin_role_is_still_admin() {
 async fn invisible_and_control_characters_are_refused_at_the_input() {
     let r = repo().await;
     let g = r.create("g", "t").await.unwrap();
-    for bad in ["owner\u{200b}", "ow\u{0}ner", "own\u{feff}er", "o\u{202e}wner"] {
-        assert!(r.add(g.id, Member::Person(person("ada")), bad).await.is_err(), "{bad:?}");
-        assert!(r.invite(g.id, &person("ada"), bad, None).await.is_err(), "{bad:?}");
-        assert!(r.add(g.id, Member::Person(bad.into()), "").await.is_err(), "{bad:?}");
+    for bad in [
+        "owner\u{200b}",
+        "ow\u{0}ner",
+        "own\u{feff}er",
+        "o\u{202e}wner",
+    ] {
         assert!(
-            r.grant(g.id, Member::Person(bad.into()), Right::Read).await.is_err(),
+            r.add(g.id, Member::Person(person("ada")), bad)
+                .await
+                .is_err(),
+            "{bad:?}"
+        );
+        assert!(
+            r.invite(g.id, &person("ada"), bad, None).await.is_err(),
+            "{bad:?}"
+        );
+        assert!(
+            r.add(g.id, Member::Person(bad.into()), "").await.is_err(),
+            "{bad:?}"
+        );
+        assert!(
+            r.grant(g.id, Member::Person(bad.into()), Right::Read)
+                .await
+                .is_err(),
             "{bad:?}"
         );
         assert!(r.may_do(g.id, bad, Right::Read).await.is_err(), "{bad:?}");
@@ -74,8 +93,13 @@ async fn a_spelling_of_an_agent_id_does_not_become_human() {
         "https://example.org/agents/bot/",
         " https://example.org/agents/bot ",
     ] {
-        let err = r.grant(g.id, Member::Person(variant.into()), Right::Manage).await;
-        assert!(matches!(err, Err(Error::AgentNotAdmin(_))), "{variant:?}: {err:?}");
+        let err = r
+            .grant(g.id, Member::Person(variant.into()), Right::Manage)
+            .await;
+        assert!(
+            matches!(err, Err(Error::AgentNotAdmin(_))),
+            "{variant:?}: {err:?}"
+        );
     }
 }
 
@@ -94,15 +118,29 @@ async fn an_up_holder_does_not_reach_the_members_of_an_up_child() {
         r.set_right_flow(g.id, RightFlow::Up).await.unwrap();
     }
     common::link(&r, interns.id, board.id).await;
-    r.add(interns.id, Member::Person(person("intern")), "").await.unwrap();
-    r.grant(club.id, Member::Group(board.id), Right::Manage).await.unwrap();
-    assert!(!r.may_do(club.id, &person("intern"), Right::Manage).await.unwrap());
+    r.add(interns.id, Member::Person(person("intern")), "")
+        .await
+        .unwrap();
+    r.grant(club.id, Member::Group(board.id), Right::Manage)
+        .await
+        .unwrap();
+    assert!(
+        !r.may_do(club.id, &person("intern"), Right::Manage)
+            .await
+            .unwrap()
+    );
     // a child approved while it said none, which then says up on its own
     let late = r.create("late", "t").await.unwrap();
     common::link(&r, late.id, board.id).await;
-    r.add(late.id, Member::Person(person("late")), "").await.unwrap();
+    r.add(late.id, Member::Person(person("late")), "")
+        .await
+        .unwrap();
     r.set_right_flow(late.id, RightFlow::Up).await.unwrap();
-    assert!(!r.may_do(club.id, &person("late"), Right::Manage).await.unwrap());
+    assert!(
+        !r.may_do(club.id, &person("late"), Right::Manage)
+            .await
+            .unwrap()
+    );
 }
 
 // ---- the mirror and what it cannot read ----
@@ -120,8 +158,12 @@ async fn an_unreadable_group_in_the_middle_takes_nobody_out_of_the_directory() {
     }
     common::link(&r, u.id, p.id).await;
     common::link(&r, c.id, u.id).await;
-    r.add(c.id, Member::Person(person("ada")), "").await.unwrap();
-    r.add(p.id, Member::Person(person("pat")), "").await.unwrap();
+    r.add(c.id, Member::Person(person("ada")), "")
+        .await
+        .unwrap();
+    r.add(p.id, Member::Person(person("pat")), "")
+        .await
+        .unwrap();
     let dir = FakeDirectory::default();
     r.sync_to(&dir).await.unwrap();
     let mut o = store.get(u.id).await.unwrap().unwrap();
@@ -148,7 +190,10 @@ async fn an_unreadable_group_in_the_middle_takes_nobody_out_of_the_directory() {
 async fn an_unreadable_membership_is_reported_and_nobody_is_removed() {
     let (r, store) = setup().await;
     let g = r.create("g", "t").await.unwrap();
-    let m = r.add(g.id, Member::Person(person("ada")), "").await.unwrap();
+    let m = r
+        .add(g.id, Member::Person(person("ada")), "")
+        .await
+        .unwrap();
     let dir = FakeDirectory::default();
     r.sync_to(&dir).await.unwrap();
     let mut o = store.get(m.id).await.unwrap().unwrap();
@@ -164,7 +209,10 @@ async fn an_unreadable_membership_is_reported_and_nobody_is_removed() {
 #[tokio::test]
 async fn cyclic_data_from_a_second_writer_never_reaches_the_directory_as_a_loop() {
     let (r, store) = setup().await;
-    let (a, b) = (r.create("a", "t").await.unwrap(), r.create("b", "t").await.unwrap());
+    let (a, b) = (
+        r.create("a", "t").await.unwrap(),
+        r.create("b", "t").await.unwrap(),
+    );
     for g in [&a, &b] {
         r.set_right_flow(g.id, RightFlow::Up).await.unwrap();
     }
@@ -173,7 +221,10 @@ async fn cyclic_data_from_a_second_writer_never_reaches_the_directory_as_a_loop(
     let dir = FakeDirectory::default();
     let report = r.sync_to(&dir).await.unwrap();
     for id in [a.id, b.id] {
-        assert!(dir.get(id).unwrap().nested.is_empty(), "no loop in the directory");
+        assert!(
+            dir.get(id).unwrap().nested.is_empty(),
+            "no loop in the directory"
+        );
     }
     assert!(!report.is_quiet());
 }

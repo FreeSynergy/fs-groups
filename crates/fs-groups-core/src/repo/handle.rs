@@ -23,7 +23,8 @@ use fs_store::{ObjectId, Store, StoredObject};
 use tokio::sync::{Mutex, MutexGuard};
 
 use super::backend::StoreAdapter;
-use crate::error::Result;
+use crate::error::{Error, Result};
+use crate::text;
 use crate::traits::AiMarking;
 
 /// Groups over an object store. Cheap to clone; clones share one write lock.
@@ -125,24 +126,40 @@ impl GroupRepo {
         self
     }
 
-    /// Role ids that count as admin besides `Right::Manage`; an agent cannot hold them.
-    #[must_use]
-    pub fn with_admin_roles<I, S>(mut self, roles: I) -> Self
+    /// Role ids that count as admin besides `Right::Manage`; an agent cannot hold them. Compared in
+    /// folded form (trimmed, case folded), so `" Owner "` and `"owner"` are one role. Text with
+    /// control or invisible characters, or an empty id, is refused.
+    pub fn with_admin_roles<I, S>(mut self, roles: I) -> Result<Self>
     where
         I: IntoIterator<Item = S>,
-        S: Into<String>,
+        S: AsRef<str>,
     {
-        self.admin_roles = roles.into_iter().map(Into::into).collect();
-        self
+        let mut folded = BTreeSet::new();
+        for role in roles {
+            text::check("admin role", role.as_ref())?;
+            let f = text::fold(role.as_ref());
+            if f.is_empty() {
+                return Err(Error::Conflict("an admin role id is empty".into()));
+            }
+            folded.insert(f);
+        }
+        self.admin_roles = folded;
+        Ok(self)
     }
 
-    /// The identity of whoever installed: the top admin, who may do everything on every group (unless
-    /// marked as an agent). **Provisional, and not authentication:** this crate only compares the
-    /// string it is asked about.
-    #[must_use]
-    pub fn with_installer(mut self, installer: impl Into<String>) -> Self {
-        self.installer = Some(installer.into());
-        self
+    /// The identity of whoever installed: the top admin, who may do everything on every group that is
+    /// not on a loop (unless marked as an agent). **Provisional, and not authentication:** this crate
+    /// only compares the string it is asked about. Padded, empty or invisible text is refused.
+    pub fn with_installer(mut self, installer: impl Into<String>) -> Result<Self> {
+        let installer = installer.into();
+        text::check("installer", &installer)?;
+        if installer.is_empty() || installer != installer.trim() {
+            return Err(Error::Conflict(
+                "the installer identity must not be empty or padded".into(),
+            ));
+        }
+        self.installer = Some(installer);
+        Ok(self)
     }
 
     /// The configured top admin, if any.

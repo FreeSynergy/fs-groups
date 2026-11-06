@@ -72,35 +72,6 @@ async fn provisional_a_right_does_not_move_to_the_members_of_a_new_parent() {
     assert!(!may(&r, &target, "head").await);
 }
 
-#[tokio::test]
-async fn provisional_members_of_an_up_child_under_an_up_holder_receive_its_rights() {
-    let r = repo().await;
-    let target = mk(&r, "target", RightFlow::None).await;
-    let holder = mk(&r, "holder", RightFlow::Up).await;
-    let child = mk(&r, "child", RightFlow::Up).await;
-    let grandchild = mk(&r, "grandchild", RightFlow::Up).await;
-    common::link(&r, child.id, holder.id).await;
-    common::link(&r, grandchild.id, child.id).await;
-    r.add(grandchild.id, Member::Person(person("ada")), "")
-        .await
-        .unwrap();
-    r.grant(target.id, Member::Group(holder.id), Right::Read)
-        .await
-        .unwrap();
-    assert!(
-        may(&r, &target, "ada").await,
-        "up along a chain of groups that all pass up"
-    );
-    r.set_right_flow(child.id, RightFlow::None).await.unwrap();
-    assert!(!may(&r, &target, "ada").await, "the chain is broken");
-    r.set_right_flow(child.id, RightFlow::Up).await.unwrap();
-    r.set_right_flow(holder.id, RightFlow::Down).await.unwrap();
-    assert!(
-        !may(&r, &target, "ada").await,
-        "the holder does not pass up"
-    );
-}
-
 // ---- in doubt, no ----
 
 #[tokio::test]

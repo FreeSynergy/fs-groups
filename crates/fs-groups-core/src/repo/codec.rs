@@ -27,6 +27,7 @@ pub(super) fn membership(o: &StoredObject) -> Option<Membership> {
         group: id_of(o, "group")?,
         member: member_of(o, "member_kind", "member")?,
         role: one(o, "role").unwrap_or_default().to_string(),
+        in_force: true,
     })
 }
 
@@ -47,6 +48,7 @@ pub(super) fn delegation(o: &StoredObject) -> Option<Delegation> {
         group: id_of(o, "group")?,
         holder: member_of(o, "holder_kind", "holder")?,
         right: Right::parse(one(o, "right")?)?,
+        in_force: true,
     })
 }
 

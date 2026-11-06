@@ -4,7 +4,7 @@
 //! where the rights pass on, a flat list elsewhere);
 //! the ledger is one store object per directory identity, so "only remove what we put there" survives restarts.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use async_trait::async_trait;
 use fs_store::{ObjectId, Query, StoredObject};
@@ -15,7 +15,6 @@ use super::envelope::context;
 use super::handle::GroupRepo;
 use crate::error::Result;
 use crate::mirror::{Divergence, Mirror};
-use crate::model::Member;
 use crate::right_flow;
 use crate::traits::DirectoryGroup;
 
@@ -32,51 +31,19 @@ impl GroupRepo {
 #[async_trait]
 impl Mirror for GroupRepo {
     async fn desired(&self) -> Result<Vec<DirectoryGroup>> {
-        let groups = self.all_groups().await?;
-        let by_id: BTreeMap<_, _> = groups.iter().map(|g| (g.id, g)).collect();
-        let graph = crate::graph::Graph::from_groups(&groups);
-        let flows = right_flow::settings(&groups);
-        let mut people: BTreeMap<ObjectId, BTreeSet<String>> = BTreeMap::new();
-        let all = self
-            .memberships(Query::new().with_index("member_kind", "person"))
-            .await?;
-        for m in all {
-            if let Member::Person(p) = m.member {
-                people.entry(m.group).or_default().insert(p);
-            }
-        }
-        let mut out = vec![];
-        for id in graph.children_first() {
-            let Some(g) = by_id.get(&id) else {
-                continue;
-            };
-            // Option B (ADR 0056): a child is nested only where the rights really pass on; for any
-            // other child the people of its whole subtree are listed in this group itself.
-            let (nested, flat): (Vec<&ObjectId>, Vec<&ObjectId>) = graph
-                .children(id)
-                .iter()
-                .partition(|c| right_flow::directory_expresses(&flows, **c, id));
-            let mut members = people.get(&id).cloned().unwrap_or_default();
-            for child in flat {
-                for below in std::iter::once(*child).chain(graph.descendants(*child)) {
-                    members.extend(people.get(&below).into_iter().flatten().cloned());
-                }
-            }
-            out.push(
-                DirectoryGroup {
-                    id,
-                    name: g.name.clone(),
-                    members: members.into_iter().collect(),
-                    nested: nested.into_iter().copied().collect(),
-                }
-                .normalised(),
-            );
-        }
-        Ok(out)
+        Ok(self.directory_state().await?.groups)
     }
 
     async fn unreadable(&self) -> Result<Vec<ObjectId>> {
-        Ok(self.read_groups().await?.1)
+        Ok(self.directory_state().await?.unreadable)
+    }
+
+    async fn looped(&self) -> Result<Vec<ObjectId>> {
+        Ok(self.directory_state().await?.looped)
+    }
+
+    async fn left_out(&self) -> Result<Vec<(ObjectId, Vec<String>)>> {
+        Ok(self.directory_state().await?.left_out)
     }
 
     async fn divergences(&self) -> Result<Vec<Divergence>> {

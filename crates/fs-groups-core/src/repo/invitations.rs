@@ -15,6 +15,7 @@ use super::handle::{GroupRepo, Writer};
 use crate::error::{Error, Result};
 use crate::invitation_state::Step;
 use crate::model::{Invitation, InvitationState, Member, Membership};
+use crate::text;
 
 impl GroupRepo {
     /// `invite.create`: invite someone; `expires` = `None` never runs out.
@@ -29,6 +30,8 @@ impl GroupRepo {
             return Err(Error::Conflict("an invitation needs an invitee".into()));
         }
         let (invitee, role) = (invitee.trim(), role.trim());
+        text::check("invitee", invitee)?;
+        text::check("role", role)?;
         let w = self.writer().await;
         let g = w.require(group).await?;
         let mut env = w.fresh_envelope(
@@ -104,6 +107,7 @@ impl GroupRepo {
         if person.is_empty() {
             return Err(Error::Conflict("an accepting person needs an IRI".into()));
         }
+        text::check("person", person)?;
         let w = self.writer().await;
         let (o, inv) = w.invitation(id).await?;
         let next = inv.state.on(Step::Accept, inv.ran_out(now))?;

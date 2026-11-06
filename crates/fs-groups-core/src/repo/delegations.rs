@@ -18,6 +18,7 @@ use crate::error::{Error, Result};
 use crate::graph::Graph;
 use crate::model::{Delegation, Member, Right};
 use crate::right_flow;
+use crate::text;
 
 impl GroupRepo {
     /// `right.grant`: give a person or a group a right on `group`. Granting the same right to the same
@@ -27,7 +28,10 @@ impl GroupRepo {
             Member::Person(p) if p.trim().is_empty() => {
                 return Err(Error::Conflict("a holder needs an IRI".into()));
             }
-            Member::Person(p) => Member::Person(p.trim().into()),
+            Member::Person(p) => {
+                text::check("holder", p.trim())?;
+                Member::Person(p.trim().into())
+            }
             group_holder @ Member::Group(_) => group_holder,
         };
         let w = self.writer().await;
@@ -70,6 +74,7 @@ impl GroupRepo {
             group,
             holder,
             right,
+            in_force: true,
         })
     }
 
@@ -77,10 +82,10 @@ impl GroupRepo {
     pub async fn revoke_right(&self, id: ObjectId) -> Result<()> {
         let w = self.writer().await;
         let found = w.load(id).await?;
-        if found
-            .as_ref()
-            .is_none_or(|o| codec::delegation(o).is_none())
-        {
+        if found.as_ref().is_none_or(|o| {
+            o.envelope.object_type != DELEGATION_TYPE
+                || o.envelope.context.as_deref() != Some(CONTEXT)
+        }) {
             return Err(Error::NotFound {
                 what: "delegation",
                 id,
@@ -97,13 +102,19 @@ impl GroupRepo {
             .in_context(CONTEXT)
             .with_index("group", group.to_string())
             .ordered(Order::PublishedAsc);
-        Ok(self
+        let mut found: Vec<_> = self
             .reads
             .query(&q)
             .await?
             .iter()
             .filter_map(codec::delegation)
-            .collect())
+            .collect();
+        for d in &mut found {
+            if let (Right::Manage, Member::Person(p)) = (d.right, &d.holder) {
+                d.in_force = self.is_known_human(p).await?;
+            }
+        }
+        Ok(found)
     }
 
     /// `right.read`: whether `person` holds `right` on `group` (`Manage` answers every right).
@@ -115,6 +126,7 @@ impl GroupRepo {
     /// A failing read is an error, not a no. The graph is loaded once per call.
     pub async fn may_do(&self, group: ObjectId, person: &str, right: Right) -> Result<bool> {
         let person = person.trim();
+        text::check("person", person)?;
         let groups = self.all_groups().await?;
         let graph = Graph::from_groups(&groups);
         if !graph.contains(group) {
@@ -162,7 +174,7 @@ impl GroupRepo {
                     Member::Person(p) => p == person,
                     Member::Group(h) => {
                         !cyclic.contains(h)
-                            && right_flow::recipients(&graph, &flows, *h)
+                            && right_flow::recipients(&flows, *h)
                                 .iter()
                                 .any(|g| !cyclic.contains(g) && mine.contains(g))
                     }

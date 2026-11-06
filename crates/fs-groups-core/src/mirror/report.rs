@@ -25,8 +25,14 @@ pub struct SyncReport {
     pub unnested: Vec<(ObjectId, ObjectId)>,
     /// Groups applied except for these people, whom the directory could not map to an account.
     pub unmapped: Vec<(ObjectId, Vec<String>)>,
-    /// Stored groups that cannot be read as a group. They are left in the directory, never removed.
+    /// Stored groups and memberships that cannot be read. While there are any nobody is taken out
+    /// of a directory group (what is wanted may be short), and the run is not quiet.
     pub unreadable: Vec<ObjectId>,
+    /// Groups on a loop (bad data from a second writer): their edges are written flat, never nested.
+    pub looped: Vec<ObjectId>,
+    /// `(group, people)` left out of a group that carries an administrative right (`Manage`, or a
+    /// member with an admin role) because they are agents or not known to be human (ADR 0056).
+    pub left_out: Vec<(ObjectId, Vec<String>)>,
     /// The ledger could not be tidied up after the run (the intent written before the run stands, so
     /// nothing is lost; ids of removed groups stay in it until the next run).
     pub ledger_error: Option<String>,
@@ -52,6 +58,8 @@ impl SyncReport {
             && self.removed.is_empty()
             && self.failed.is_empty()
             && self.unnested.is_empty()
+            && self.unreadable.is_empty()
+            && self.looped.is_empty()
             && self.unmapped.is_empty()
             && self.ledger_error.is_none()
     }

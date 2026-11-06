@@ -25,6 +25,7 @@ pub mod mirror;
 pub mod model;
 mod repo;
 pub mod right_flow;
+mod text;
 pub mod traits;
 mod unsupported;
 

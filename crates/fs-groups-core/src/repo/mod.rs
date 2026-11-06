@@ -8,6 +8,7 @@ mod backend;
 mod codec;
 mod consts;
 mod delegations;
+mod directory_state;
 mod effective;
 mod envelope;
 mod handle;
