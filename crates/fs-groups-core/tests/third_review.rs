@@ -4,11 +4,10 @@
 mod common;
 
 use std::collections::BTreeSet;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-use async_trait::async_trait;
 use common::{Agents, FakeDirectory, ME, link, person, setup};
-use fs_groups_core::{AiMarking, Group, GroupRepo, Member, Mirror, Right, RightFlow};
+use fs_groups_core::{Group, GroupRepo, Member, Mirror, Right, RightFlow};
 use fs_store::{ObjectId, Store};
 
 const BOT: &str = "https://example.org/agents/bot";
