@@ -10,7 +10,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use async_trait::async_trait;
 use fs_groups_core::{DirectoryGroup, Error, GroupDirectory, GroupRepo, Result};
 use fs_interfaces::Capabilities;
-use fs_store::{ObjectId, Store, Timestamp, TursoStore};
+use fs_store::traits::{ObjectQuery, ObjectRepository};
+use fs_store::{Activity, LogEntry, ObjectId, Query, StoredObject};
+use fs_store::{Store, Timestamp, TursoStore};
 
 pub const ME: &str = "https://local.invalid/users/owner";
 
@@ -95,4 +97,58 @@ impl GroupDirectory for FakeDirectory {
         self.groups.lock().unwrap().remove(&id);
         Ok(())
     }
+}
+
+/// A backend that answers every read late, so a second writer gets in between a read and the write
+/// that depends on it. This forces the interleavings a fast in-memory store hides.
+pub struct Slow(pub Arc<dyn Store>);
+
+async fn pause() {
+    tokio::time::sleep(std::time::Duration::from_millis(3)).await;
+}
+
+#[async_trait]
+impl ObjectRepository for Slow {
+    async fn put(&self, o: StoredObject, actor: &str) -> fs_store::Result<Activity> {
+        Store::put(&*self.0, o, actor).await
+    }
+    async fn put_and_log(
+        &self,
+        o: StoredObject,
+        actor: &str,
+        extra: Vec<LogEntry>,
+    ) -> fs_store::Result<Vec<Activity>> {
+        Store::put_and_log(&*self.0, o, actor, extra).await
+    }
+    async fn get(&self, id: ObjectId) -> fs_store::Result<Option<StoredObject>> {
+        let r = Store::get(&*self.0, id).await;
+        pause().await;
+        r
+    }
+    async fn delete(&self, id: ObjectId, actor: &str) -> fs_store::Result<Activity> {
+        Store::delete(&*self.0, id, actor).await
+    }
+}
+
+#[async_trait]
+impl ObjectQuery for Slow {
+    async fn query(&self, q: &Query) -> fs_store::Result<Vec<StoredObject>> {
+        let r = Store::query(&*self.0, q).await;
+        pause().await;
+        r
+    }
+    async fn count(&self, q: &Query) -> fs_store::Result<usize> {
+        Store::count(&*self.0, q).await
+    }
+}
+
+/// `n` repositories over one slow store (each its own instance, as two callers would have).
+pub async fn slow_repos(n: usize) -> Vec<GroupRepo> {
+    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let slow = Arc::new(Slow(store));
+    (0..n)
+        .map(|_| {
+            GroupRepo::with_backend(slow.clone(), slow.clone(), ME).with_instance("example.org")
+        })
+        .collect()
 }
