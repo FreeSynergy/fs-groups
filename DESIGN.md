@@ -56,6 +56,7 @@ Version 0.3.0. **Several rules below are provisional: the owner is still answeri
 | `repo/notify.rs` | Decorator | wraps the store's `ObjectRepository`, so no write path can forget to tell the feed |
 | `fs-groups-server/{groups,items,nesting,memberships,invitations,delegations}_service.rs` | Adapter + Factory | wire in, one trait call, wire out; depends on the traits only |
 | `fs-groups-server/{wire/*,errors,feed}.rs` | Adapter, Observer | values on the wire with their limits, core errors as RFC 9457 problems, `GroupFeed` to the shared forwarder |
+| `follow_rules.rs` (planned, see Following) | Specification (pure) + State + Repository | following between independent groups; not a tree, parents and cycles untouched. Repository turned round: the giver delivers, the receiver lists sources; State for delivery and source; Specification for "never more than the giver has", "pass on only with permission", "the sender is the origin" |
 | `mirror/plan.rs` | Specification (pure) | create / update / keep / remove decided without I/O |
 | `repo/mirror.rs` | Repository | wanted state + the ledger of mirrored ids |
 
@@ -139,6 +140,17 @@ Version 0.3.0. **Several rules below are provisional: the owner is still answeri
 * **`Items.list`** walks the provider's pages and cuts the wire page by weight, so each page reads the whole list; cursors are places in that list (`fs-interfaces/DESIGN.md`).
 * **`--instance`** comes from the shared `ServerOptions` (since `fs-interfaces` v0.24.0); without it IRIs say `local.invalid`.
 * **Right flow:** the server maps the enum and nothing else; the meaning stays in `right_flow.rs` and may change there.
+
+## Following (ADR 0056 "Einseitig folgen", owner 2026-11-07; the form is a proposal)
+
+Independent groups, no tree. **Who allows access, delivers.** The receiver gets an offer (proposal: AS2 `Invite`), its server
+enters the source without any confirmation, and the receiver can remove it again. Mutual following is allowed. Only the giver's
+own rights go, never more than the giver holds (checked with `may_do`). A receiver may pass a delivery on to a third group only
+if the source marked it so (flag on the delivery); the giver can revoke at any time. "Belongs to" with parents stays as it is
+and following never touches it.
+Order of work on branch `follow`: (1) pattern, (2) contract and trait, answering `Unsupported`, (3) tests against the trait,
+(4) implementation. Assumptions (all provisional): `Manage` is never delivered to a foreign group; a relayed delivery is not
+passable again; revoking or removing a source revokes the deliveries relayed from it; the host authenticates the sender.
 
 ## Open points
 

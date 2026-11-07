@@ -19,6 +19,7 @@
 )]
 
 mod error;
+mod follow_rules;
 pub mod graph;
 mod invitation_state;
 pub mod mirror;
