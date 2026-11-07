@@ -1,14 +1,14 @@
 //! What this provider reports it can do.
 //!
 //! Pattern: Null Object (report) — one place that lists every capability id of the schema (ADR 0045).
-//! All are offered today; one that is not would be recorded here with its reason.
+//! All are offered today (the `follow.*` ids are left out until a server exposes `Follows`); one that is not would be recorded here with its reason.
 
 use fs_interfaces::Capabilities;
 
 use super::handle::GroupRepo;
 
 /// Capability ids that `GroupRepo` provides.
-const SUPPORTED: [&str; 17] = [
+const SUPPORTED: [&str; 14] = [
     "group.create",
     "group.update",
     "group.delete",
@@ -23,9 +23,6 @@ const SUPPORTED: [&str; 17] = [
     "invite.read",
     "right.grant",
     "right.read",
-    "follow.deliver",
-    "follow.receive",
-    "follow.read",
 ];
 
 impl GroupRepo {
