@@ -14,6 +14,7 @@ fn source(pass_on: bool, state: SourceState) -> Source {
             recipient: "https://b.example/groups/y".into(),
             rights: vec![Right::Read],
             pass_on,
+            origin: "https://a.example/groups/x".into(),
         },
         sender: "a.example".into(),
         state,

@@ -29,6 +29,7 @@ pub(super) fn offer_fields(
         .with_index("delivery", offer.delivery.to_string())
         .with_index("source_iri", offer.source.clone())
         .with_index("recipient", offer.recipient.clone())
+        .with_index("origin", offer.origin.clone())
         .with_index("pass_on", offer.pass_on.to_string())
         .with_index("state", state);
     for r in &offer.rights {
@@ -44,6 +45,7 @@ pub(super) fn offer(o: &StoredObject) -> Option<Offer> {
         recipient: one(o, "recipient")?.to_string(),
         rights: rights(o)?,
         pass_on: one(o, "pass_on")? == "true",
+        origin: one(o, "origin")?.to_string(),
     })
 }
 
@@ -58,6 +60,7 @@ pub(super) fn delivery(o: &StoredObject) -> Option<Delivery> {
         pass_on: offer.pass_on,
         via: id_of(o, "via"),
         state: DeliveryState::parse(one(o, "state")?)?,
+        origin: offer.origin,
     })
 }
 

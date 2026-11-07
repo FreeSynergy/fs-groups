@@ -3,8 +3,9 @@
 //! Pattern: Repository + State + Specification — a delivery is stored per receiving group and is
 //! `Active` until revoked; the rules (`follow_rules`) decide what may be given. The giver can give only
 //! what the acting person holds there (`may_do`) and never `Manage`; a relayed delivery only within a
-//! source that allows passing on. **Not enforced:** `actor` is a string nobody authenticates, as for
-//! nesting (`DESIGN.md`); `pass_on` does not ask whether the actor may act for the receiving group.
+//! source that allows passing on, and only what the acting person holds on the passing group (`may_do`).
+//! A relayed copy keeps `origin`, the first source (provisional); `source` is who sent it. **Not enforced:** `actor` is a string nobody authenticates,
+//! as for nesting (`DESIGN.md`).
 
 use fs_store::{ObjectId, Order, Query, StoredObject};
 use serde_json::json;
@@ -41,7 +42,8 @@ impl GroupRepo {
                 )));
             }
         }
-        w.store_delivery(group, recipient, rights, pass_on, None)
+        let origin = w.iri(group);
+        w.store_delivery(group, recipient, rights, pass_on, (None, origin))
             .await
     }
 
@@ -57,18 +59,34 @@ impl GroupRepo {
         let rights = normalise(rights)?;
         let w = self.writer().await;
         let s = w.source(source).await?;
+        for r in &rights {
+            if !w.may_do(s.group, &self.actor, *r).await? {
+                return Err(Error::Forbidden(format!(
+                    "{} does not hold {} on group {}, so cannot pass it on",
+                    self.actor,
+                    r.as_str(),
+                    s.group
+                )));
+            }
+        }
         if !may_pass_on(&s) || !within(&s.offer.rights, &rights) {
             return Err(Error::Forbidden(format!(
                 "source {source} was not given to be passed on, or not with these rights"
             )));
         }
-        if recipient.trim() == s.offer.source {
+        if recipient.trim() == s.offer.origin {
             return Err(Error::Invalid(
                 "a source is not passed back to itself".into(),
             ));
         }
-        w.store_delivery(s.group, recipient, rights, false, Some(source))
-            .await
+        w.store_delivery(
+            s.group,
+            recipient,
+            rights,
+            false,
+            (Some(source), s.offer.origin),
+        )
+        .await
     }
 
     /// `follow.deliver`: the giver ends a delivery, at any time. Ending it twice changes nothing.
@@ -116,7 +134,7 @@ impl Writer<'_> {
         recipient: &str,
         rights: Vec<Right>,
         pass_on: bool,
-        via: Option<ObjectId>,
+        (via, origin): (Option<ObjectId>, String),
     ) -> Result<(Delivery, Offer)> {
         let recipient = recipient.trim();
         if !recipient.starts_with("https://") || recipient == self.iri(group) {
@@ -131,6 +149,7 @@ impl Writer<'_> {
                 recipient: recipient.into(),
                 rights: rights.clone(),
                 pass_on,
+                origin: origin.clone(),
             };
             let d = Delivery {
                 id,
@@ -140,6 +159,7 @@ impl Writer<'_> {
                 pass_on,
                 via,
                 state,
+                origin: origin.clone(),
             };
             (d, offer)
         };

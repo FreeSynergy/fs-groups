@@ -23,23 +23,35 @@ async fn following_does_not_touch_parents_or_cycles() {
         a.parents(sub.id).await.unwrap(),
         a.children(top.id).await.unwrap(),
     );
-    // mutual following, also from the child up to the parent's site
-    for (g, giver, taker, from, to) in [(sub.id, &a, &b, "a.example", gb.id)] {
-        let (_, o) = Follows::deliver(giver, g, &group_iri("b.example", to), &[Right::Read], false)
-            .await
-            .unwrap();
-        Follows::receive(taker, from, &o).await.unwrap();
-    }
-    let (_, back) = Follows::deliver(
-        &b,
-        gb.id,
-        &group_iri("a.example", top.id),
+    // mutual following of the same two groups: the child of this site and the group of the other
+    let (_, to_b) = Follows::deliver(
+        &a,
+        sub.id,
+        &group_iri("b.example", gb.id),
         &[Right::Read],
         false,
     )
     .await
     .unwrap();
-    Follows::receive(&a, "b.example", &back).await.unwrap();
+    let (_, to_sub) = Follows::deliver(
+        &b,
+        gb.id,
+        &group_iri("a.example", sub.id),
+        &[Right::Read],
+        false,
+    )
+    .await
+    .unwrap();
+    let on_b = Follows::receive(&b, "a.example", &to_b).await.unwrap();
+    let on_a = Follows::receive(&a, "b.example", &to_sub).await.unwrap();
+    assert_eq!(
+        (on_b.group, on_b.offer.source.clone()),
+        (gb.id, group_iri("a.example", sub.id))
+    );
+    assert_eq!(
+        (on_a.group, on_a.offer.source.clone()),
+        (sub.id, group_iri("b.example", gb.id))
+    );
     assert_eq!(
         before,
         (
@@ -128,7 +140,7 @@ async fn losing_a_source_revokes_what_was_relayed_from_it() {
         site("c.example").await,
     );
     let ga = group_with(&a, "a.example", "A", &[Right::Read, Right::AddMembers]).await;
-    let gb = b.create("B", "team").await.unwrap();
+    let gb = group_with(&b, "b.example", "B", &[Right::Read, Right::AddMembers]).await;
     let gc = c.create("C", "team").await.unwrap();
     let (d, o) = Follows::deliver(
         &a,

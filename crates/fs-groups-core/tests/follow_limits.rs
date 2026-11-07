@@ -66,7 +66,7 @@ async fn passing_on_with_permission_works_within_what_was_given() {
         site("c.example").await,
     );
     let ga = group_with(&a, "a.example", "A", &[Right::Read, Right::AddMembers]).await;
-    let gb = b.create("B", "team").await.unwrap();
+    let gb = group_with(&b, "b.example", "B", &[Right::Read]).await;
     let gc = c.create("C", "team").await.unwrap();
     let to_c = group_iri("c.example", gc.id);
     let (_, offer) = Follows::deliver(
@@ -102,7 +102,7 @@ async fn a_relayed_copy_is_not_passable_again() {
         site("c.example").await,
     );
     let ga = group_with(&a, "a.example", "A", &[Right::Read]).await;
-    let gb = b.create("B", "team").await.unwrap();
+    let gb = group_with(&b, "b.example", "B", &[Right::Read]).await;
     let gc = c.create("C", "team").await.unwrap();
     let (_, offer) = Follows::deliver(
         &a,

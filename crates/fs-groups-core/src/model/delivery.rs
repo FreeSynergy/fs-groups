@@ -50,6 +50,8 @@ pub struct Delivery {
     pub via: Option<ObjectId>,
     /// Current state.
     pub state: DeliveryState,
+    /// IRI of the group whose right this is: the giving group, or for a relayed copy the first source.
+    pub origin: String,
 }
 
 /// What reaches the receiver: enough to enter the source (the content of the AS2 `Invite`, proposal).
@@ -65,6 +67,8 @@ pub struct Offer {
     pub rights: Vec<Right>,
     /// Whether the receiver may pass it on.
     pub pass_on: bool,
+    /// IRI of the group whose right this is; equals `source` unless the giver relays.
+    pub origin: String,
 }
 
 impl Offer {
@@ -73,7 +77,7 @@ impl Offer {
         serde_json::json!({
             "@context": ["https://www.w3.org/ns/activitystreams", {"fs": super::NS}],
             "type": "Invite", "actor": self.source, "object": self.source, "target": self.recipient,
-            "fs:delivery": self.delivery.to_string(), "fs:passOn": self.pass_on,
+            "fs:delivery": self.delivery.to_string(), "fs:origin": self.origin, "fs:passOn": self.pass_on,
             "fs:rights": self.rights.iter().map(|r| r.as_str()).collect::<Vec<_>>(),
         })
     }

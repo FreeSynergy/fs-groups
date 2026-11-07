@@ -26,6 +26,11 @@ impl GroupRepo {
                 offer.source
             )));
         }
+        if !offer.origin.starts_with("https://") {
+            return Err(Error::Invalid(
+                "an offer names the group whose right it is".into(),
+            ));
+        }
         let rights = normalise(&offer.rights)?;
         let group = local_group(&self.instance, &offer.recipient)
             .ok_or_else(|| Error::Invalid(format!("{} is not a group here", offer.recipient)))?;

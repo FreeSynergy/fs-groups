@@ -139,6 +139,7 @@ Version 0.3.0. **Several rules below are provisional: the owner is still answeri
 * **Lists:** `Items.list`, `Memberships.direct` and `effective` page by weight (the two were appended to the contract for this: the ids for `remove` only come from `direct`). The others (`invitations.list`, `delegations.list`, `parentRequests`, `groupsOf` and the id lists) still have no cursor and answer 413 rather than end the connection if they would not fit, about 8000 entries of the longest identifier. `invitations.list` and `delegations.list` can lock out `revoke` that way: the ids come from `invite` and `grant` too, but only to that caller.
 * **`Items.list`** walks the provider's pages and cuts the wire page by weight, so each page reads the whole list; cursors are places in that list (`fs-interfaces/DESIGN.md`).
 * **`--instance`** comes from the shared `ServerOptions` (since `fs-interfaces` v0.24.0); without it IRIs say `local.invalid`.
+* **`Follows` (`Groups.follows @6`) is not served.** The core offers it (`GroupRepo`), the server hands out no `Follows`; the `follow.*` capability ids are therefore not in `supportReport` either (the report would claim what the server does not serve; `errors.rs` pins the list). Whoever builds the server half maps the trait and adds the ids.
 * **Right flow:** the server maps the enum and nothing else; the meaning stays in `right_flow.rs` and may change there.
 
 ## Following (ADR 0056 "Einseitig folgen", owner 2026-11-07; the form is a proposal)
@@ -157,7 +158,12 @@ Stored as `Delivery` (giver side, index `group` = giving group) and `Source` (re
 could enter themselves as a source of somebody else (the harm is a false entry, not a right: a right only ever lies on the giver's
 own server). Entering without confirmation also means anybody can fill a group's source list; the receiver removes entries. Revoking
 needs a message `withdraw` to the receiver; if it never arrives the entry stays `Active` there (the giver's own record is what counts).
-`deliver` asks `may_do` of the acting person; `pass_on`, `revoke_delivery`, `remove_source` do not ask who acts (same gap as nesting).
+`deliver` asks `may_do` of the acting person on the giving group; `pass_on` asks it on the passing group for every right passed on, so a
+relay cannot give what its actor does not hold (the conservative reading, **provisional**). `revoke_delivery` and `remove_source` do not
+ask who acts (same gap as nesting). **Origin (provisional):** `Offer.origin` / `Delivery.origin` name the group whose right it is; a
+relayed copy keeps the first source while `source` says who sent it, and a copy is not passed back to its origin. Nothing proves that an
+`origin` that differs from `source` is true: the receiver trusts its sender for it, as for everything else the sender says.
+Ids are typed: a source id is `NotFound` for `revoke_delivery` and a delivery id for `remove_source`. Ending twice writes and tells nothing.
 
 ## Open points
 
