@@ -2,7 +2,7 @@
 //!
 //! Pattern: Value objects — `Member` is a sum type (the `union` of the contract).
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 /// A person (IRI of a person in fs-people, or an actor) or a group.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

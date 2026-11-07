@@ -4,7 +4,7 @@
 
 use std::collections::BTreeSet;
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use crate::traits::DirectoryGroup;
 

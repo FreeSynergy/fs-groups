@@ -5,7 +5,7 @@
 //! answers cannot both win. Accepting creates the membership first, then marks the invitation, so a
 //! failure in between is repaired by accepting again.
 
-use fs_store::{ObjectId, Order, Query, StoredObject, Timestamp};
+use fs_objects::{ObjectId, Order, Query, StoredObject, Timestamp};
 use serde_json::json;
 
 use super::codec;

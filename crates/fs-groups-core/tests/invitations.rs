@@ -148,7 +148,7 @@ async fn an_invitation_to_an_unknown_group_or_without_invitee_is_refused() {
     let r = repo().await;
     let g = r.create("Club", "club").await.unwrap();
     assert!(
-        r.invite(fs_store::ObjectId::new(), "a", "", None)
+        r.invite(fs_objects::ObjectId::new(), "a", "", None)
             .await
             .is_err()
     );

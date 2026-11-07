@@ -1,7 +1,7 @@
 //! The pure graph: walks, paths and the order for a directory.
 
 use fs_groups_core::{Graph, Group};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 fn group(parents: &[ObjectId]) -> Group {
     let id = ObjectId::new();

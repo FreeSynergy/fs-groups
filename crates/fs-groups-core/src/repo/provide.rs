@@ -5,7 +5,7 @@
 
 use async_trait::async_trait;
 use fs_interfaces::Capabilities;
-use fs_store::{ObjectId, Timestamp};
+use fs_objects::{ObjectId, Timestamp};
 
 use super::handle::GroupRepo;
 use crate::error::Result;

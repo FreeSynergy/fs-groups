@@ -3,7 +3,7 @@
 //! Pattern: Specification (the no-cycle rule, checked on the in-memory `Graph` before anything is
 //! written) inside a Repository. Kanidm would accept a loop (research note, section 3); we do not.
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use super::handle::GroupRepo;
 use crate::error::{Error, Result};

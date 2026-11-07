@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use common::{Agents, FakeDirectory, ME, NoAnswer, link, person, setup};
 use fs_groups_core::{Group, GroupRepo, Member, Mirror, Right, RightFlow};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 const BOT: &str = "https://example.org/agents/bot";
 

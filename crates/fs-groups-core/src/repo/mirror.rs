@@ -7,7 +7,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use async_trait::async_trait;
-use fs_store::{ObjectId, Query, StoredObject};
+use fs_objects::{ObjectId, Query, StoredObject};
 use serde_json::json;
 
 use super::consts::{AS2_TYPE, CONTEXT, LEDGER_TYPE};

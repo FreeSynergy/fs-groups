@@ -1,7 +1,7 @@
 # fs-groups – Design
 
 `fs-groups` is the groups program of FreeSynergy. This repo holds the **program core** (`crates/fs-groups-core`, no GUI).
-A group is an **AS2 `Group`** in an envelope stored through `fs-store` (ADR 0014, 0020, 0050). It runs alone, without any
+A group is an **AS2 `Group`** in an envelope stored through `fs-objects` (ADR 0014, 0020, 0050). It runs alone, without any
 directory (ADR 0024); a directory is only a mirror (ADR 0047). Contract: `groups.capnp` in `fs-interfaces` v0.31.0 (draft).
 
 ## State
@@ -199,5 +199,5 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
 
 ## Crates
 
-`fs-store` (git tag v0.2.0), `fs-interfaces` (git tag v0.31.0), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full).
+`fs-objects` (git tag v0.2.0), `fs-interfaces` (git tag v0.31.0), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full).
 All MIT / Apache-2.0. No Kanidm dependency of any kind.

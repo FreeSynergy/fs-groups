@@ -12,7 +12,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use fs_store::{ObjectId, Order, Query, StoredObject};
+use fs_objects::{ObjectId, Order, Query, StoredObject};
 
 use super::codec;
 use super::consts::{

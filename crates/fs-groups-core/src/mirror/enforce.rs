@@ -9,7 +9,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use super::wanted::{AdminRule, Bar, Verdict};
 use crate::traits::DirectoryGroup;

@@ -14,7 +14,7 @@ use common::{ME, Recording, link, person, setup};
 use fs_groups_core::{
     AiMarking, DirectoryGroup, Group, GroupRepo, Member, Mirror, Right, RightFlow,
 };
-use fs_store::{ObjectId, Store};
+use fs_objects::{ObjectId, Store};
 
 /// The host: listed people are agents, others listed are unknown, everybody else is human.
 #[derive(Default)]

@@ -4,7 +4,7 @@ mod common;
 
 use common::repo;
 use fs_groups_core::Error;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 #[tokio::test]
 async fn a_group_is_an_as2_group_in_an_envelope() {

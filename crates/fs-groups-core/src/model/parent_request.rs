@@ -3,7 +3,7 @@
 //! Pattern: State (small) + Value object — the three states are an enum; the repository moves a
 //! request only from `Pending`.
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 /// Where a request to become a child stands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use fs_groups_core::{Delegations, Error, GroupRepo, Invitations, Member, Right};
-use fs_store::{Store, Timestamp, TursoStore};
+use fs_objects::{Store, Timestamp, TursoStore};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

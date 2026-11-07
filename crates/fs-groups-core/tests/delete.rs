@@ -58,5 +58,5 @@ async fn delete_removes_memberships_invitations_delegations_and_links() {
 #[tokio::test]
 async fn deleting_an_unknown_group_is_not_found() {
     let r = repo().await;
-    assert!(r.delete(fs_store::ObjectId::new()).await.is_err());
+    assert!(r.delete(fs_objects::ObjectId::new()).await.is_err());
 }

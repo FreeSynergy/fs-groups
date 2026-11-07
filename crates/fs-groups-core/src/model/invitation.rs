@@ -2,7 +2,7 @@
 //!
 //! Pattern: State — the states are an enum; the one transition function is in `invitation_state.rs`.
 
-use fs_store::{ObjectId, Timestamp};
+use fs_objects::{ObjectId, Timestamp};
 
 /// Where an invitation stands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

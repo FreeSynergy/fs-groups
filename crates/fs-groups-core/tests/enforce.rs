@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use fs_groups_core::{AdminRule, DirectoryGroup, Verdict, enforce};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 fn group(id: ObjectId, members: &[&str], nested: &[ObjectId]) -> DirectoryGroup {
     DirectoryGroup {

@@ -13,7 +13,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use crate::graph::Graph;
 use crate::model::{Group, RightFlow};

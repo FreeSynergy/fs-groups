@@ -11,7 +11,7 @@
 //! delegation at all, if it is the one who created the parent. `grant` itself is not guarded yet,
 //! so anybody who can call it can give themselves `manage`.
 
-use fs_store::{ObjectId, Order, Query, StoredObject};
+use fs_objects::{ObjectId, Order, Query, StoredObject};
 use serde_json::json;
 
 use super::codec;

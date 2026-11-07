@@ -153,7 +153,7 @@ async fn may_do_ignores_a_holder_group_that_is_gone() {
 fn reach_of_an_unknown_group_is_empty() {
     let none = std::collections::BTreeMap::new();
     let graph = fs_groups_core::Graph::default();
-    let id = fs_store::ObjectId::new();
+    let id = fs_objects::ObjectId::new();
     assert!(fs_groups_core::right_flow::reach(&graph, &none, id).is_empty());
 }
 

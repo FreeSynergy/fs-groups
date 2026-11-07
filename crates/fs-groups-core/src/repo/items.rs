@@ -4,7 +4,7 @@
 //! same step; `delete` is a Command-like cascade that removes everything that hangs on the group,
 //! then the group (children stay).
 
-use fs_store::{ObjectId, Order, Query};
+use fs_objects::{ObjectId, Order, Query};
 
 use super::consts::{CONTEXT, GROUP_TYPE};
 use super::handle::{GroupRepo, Writer};

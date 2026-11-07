@@ -9,7 +9,7 @@ use std::collections::BTreeSet;
 
 use common::{FakeDirectory, link, person, repo};
 use fs_groups_core::{Divergence, Group, GroupRepo, Member, Mirror, Right, RightFlow};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 async fn mk(r: &GroupRepo, name: &str, flow: RightFlow) -> Group {
     let g = r.create(name, "t").await.unwrap();

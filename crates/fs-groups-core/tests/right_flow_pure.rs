@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use fs_groups_core::right_flow::{reach, sources};
 use fs_groups_core::{Graph, Group, RightFlow};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 /// Small deterministic generator, so the check below needs no extra crate.
 struct Lcg(u64);

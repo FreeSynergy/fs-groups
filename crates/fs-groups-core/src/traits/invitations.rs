@@ -4,7 +4,7 @@
 //! (`invitation_state.rs`). The time is always passed in, so nothing here needs a clock.
 
 use async_trait::async_trait;
-use fs_store::{ObjectId, Timestamp};
+use fs_objects::{ObjectId, Timestamp};
 
 use crate::error::Result;
 use crate::model::{Invitation, Membership};

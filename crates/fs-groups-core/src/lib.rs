@@ -1,6 +1,6 @@
 //! `fs-groups-core`: program core of FreeSynergy groups (no GUI, no capnp server yet).
 //!
-//! A group is an AS2 `Group` in an envelope stored through `fs-store` (ADR 0014, 0020, 0050). Groups
+//! A group is an AS2 `Group` in an envelope stored through `fs-objects` (ADR 0014, 0020, 0050). Groups
 //! nest (several parents allowed, a cycle is refused), people belong to them with a role, people are
 //! invited, and rights are delegated more finely than all-or-nothing. It runs alone (ADR 0024); a
 //! directory such as Kanidm is only a mirror behind [`GroupDirectory`] (ADR 0047).

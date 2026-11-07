@@ -10,8 +10,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use async_trait::async_trait;
 use fs_groups_core::{AiMarking, DirectoryGroup, Error, GroupDirectory, GroupRepo, Result};
 use fs_interfaces::Capabilities;
-use fs_store::ObjectId;
-use fs_store::{Store, Timestamp, TursoStore};
+use fs_objects::ObjectId;
+use fs_objects::{Store, Timestamp, TursoStore};
 
 pub const ME: &str = "https://local.invalid/users/owner";
 

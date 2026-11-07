@@ -4,7 +4,7 @@ mod common;
 
 use common::{person, repo, setup};
 use fs_groups_core::{Error, Member};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 #[tokio::test]
 async fn a_person_joins_with_a_role_and_is_listed() {

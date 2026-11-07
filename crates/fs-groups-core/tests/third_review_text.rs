@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use common::{Agents, FakeDirectory, ME, person, setup};
 use fs_groups_core::{AiMarking, Group, GroupRepo, Member, Mirror, Right, RightFlow};
-use fs_store::Store;
+use fs_objects::Store;
 
 async fn world(agents: &[&str]) -> (GroupRepo, Arc<dyn Store>, Arc<Agents>) {
     let (r, store) = setup().await;

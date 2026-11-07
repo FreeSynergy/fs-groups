@@ -7,7 +7,7 @@
 
 use std::collections::BTreeSet;
 
-use fs_store::{ObjectId, Order, Query, StoredObject};
+use fs_objects::{ObjectId, Order, Query, StoredObject};
 use serde_json::json;
 
 use super::codec;

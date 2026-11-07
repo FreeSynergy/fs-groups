@@ -7,7 +7,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use common::{Agents, FakeDirectory, ME, at, force_parent, person, repo, setup};
 use fs_groups_core::{AiMarking, Error, GroupRepo, Member, Mirror, Right, RightFlow};
-use fs_store::Query;
+use fs_objects::Query;
 
 const BOT: &str = "https://example.org/agents/bot";
 
@@ -234,7 +234,7 @@ async fn a_repeat_does_not_rewrite_the_ledger() {
     r.create("g", "t").await.unwrap();
     let dir = FakeDirectory::default();
     r.sync_to(&dir).await.unwrap();
-    let ledger = |store: &Arc<dyn fs_store::Store>| {
+    let ledger = |store: &Arc<dyn fs_objects::Store>| {
         let store = store.clone();
         async move {
             let q = Query::new().of_type("MirrorLedger");
