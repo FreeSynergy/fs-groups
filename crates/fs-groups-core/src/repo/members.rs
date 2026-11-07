@@ -3,7 +3,7 @@
 //! Pattern: Repository — a membership is an AS2 `Relationship` in `org:Membership` form (subject =
 //! the person, object = the group, `org:role`), with index fields for lookup.
 
-use fs_store::{ObjectId, Order, Query};
+use fs_objects::{ObjectId, Order, Query};
 use serde_json::json;
 
 use super::codec;
@@ -98,7 +98,7 @@ impl Writer<'_> {
             "@context": context(), "type": MEMBERSHIP_TYPE, "subject": member.key(),
             "relationship": ORG_MEMBERSHIP, "object": g.iri, "org:role": role,
         });
-        let obj = fs_store::StoredObject::new(env, AS2_TYPE, content)
+        let obj = fs_objects::StoredObject::new(env, AS2_TYPE, content)
             .with_index("relationship", ORG_MEMBERSHIP)
             .with_index("group", group.to_string())
             .with_index("member_kind", member.kind())

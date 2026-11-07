@@ -18,7 +18,7 @@
 //!
 //! No other pattern of `coding.md` section 2 fits better; nothing was invented.
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use crate::error::{Error, Result};
 use crate::model::{Right, Source, SourceState};

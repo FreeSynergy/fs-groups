@@ -8,8 +8,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use fs_store::traits::ObjectRepository;
-use fs_store::{Activity, ActivityKind, LogEntry, ObjectId, Result, StoredObject};
+use fs_objects::traits::ObjectRepository;
+use fs_objects::{Activity, ActivityKind, LogEntry, ObjectId, Result, StoredObject};
 
 use super::consts::LEDGER_TYPE;
 use crate::traits::{GroupChange, Registry};
@@ -36,7 +36,7 @@ impl Notifying {
     }
 }
 
-fn after(activity: &Activity) -> Option<fs_store::Envelope> {
+fn after(activity: &Activity) -> Option<fs_objects::Envelope> {
     let image = activity.change_set().ok()?.after?;
     (image.envelope.object_type != LEDGER_TYPE).then_some(image.envelope)
 }

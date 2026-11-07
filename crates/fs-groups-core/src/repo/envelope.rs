@@ -1,9 +1,9 @@
 //! Envelope and stored-object building for every object kind of this program.
 //!
-//! Pattern: Adapter — maps the typed values onto AS2 envelopes plus index fields that `fs-store`
+//! Pattern: Adapter — maps the typed values onto AS2 envelopes plus index fields that `fs-objects`
 //! understands (ADR 0020). The envelope `name` is derived, never typed separately (ADR 0032).
 
-use fs_store::{Envelope, StoredObject};
+use fs_objects::{Envelope, StoredObject};
 use serde_json::{Value, json};
 
 use super::consts::{AS2_TYPE, CONTEXT, GROUP_TYPE};

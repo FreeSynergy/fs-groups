@@ -6,7 +6,7 @@
 //! source lies at the origin the transport named: **nothing here authenticates that origin**, the
 //! host does. Losing a source (withdrawn or removed) revokes the deliveries relayed from it.
 
-use fs_store::{ObjectId, Order, Query, StoredObject};
+use fs_objects::{ObjectId, Order, Query, StoredObject};
 
 use super::consts::{AS2_TYPE, CONTEXT, SOURCE_TYPE};
 use super::follow_codec::{offer_fields, source};

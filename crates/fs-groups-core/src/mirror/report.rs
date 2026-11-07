@@ -2,7 +2,7 @@
 //!
 //! Pattern: Value object — plain lists of group ids, one per outcome.
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 /// Result of `Mirror::sync_to`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

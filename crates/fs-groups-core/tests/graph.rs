@@ -1,7 +1,7 @@
 //! The pure graph: walks, paths and the order for a directory.
 
 use fs_groups_core::{Graph, Group};
-use fs_store::{Envelope, ObjectId};
+use fs_objects::{Envelope, ObjectId};
 
 fn group(parents: &[ObjectId]) -> Group {
     let envelope = Envelope::new("Group", "x");

@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use common::{faulty_repo, force_parent, person, repo, setup};
 use fs_groups_core::right_flow::{reach, sources};
 use fs_groups_core::{Error, Graph, Group, GroupRepo, Member, Right, RightFlow};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 async fn mk(r: &GroupRepo, name: &str, flow: RightFlow) -> Group {
     let g = r.create(name, "t").await.unwrap();
@@ -218,7 +218,7 @@ fn group(id: ObjectId, flow: RightFlow, parents: Vec<ObjectId>) -> Group {
         kind: String::new(),
         parents,
         right_flow: flow,
-        envelope: fs_store::Envelope::new("Group", "x"),
+        envelope: fs_objects::Envelope::new("Group", "x"),
     }
 }
 

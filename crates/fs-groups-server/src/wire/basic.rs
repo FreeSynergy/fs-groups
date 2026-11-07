@@ -8,7 +8,7 @@ use fs_interfaces::common_capnp::{cursor, uuid};
 use fs_interfaces::rpc::{
     check_answer, check_intake, invalid_request, read_object_id, too_large, write_object_id,
 };
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 /// What one stored character can come back as: a group repeats its name and kind (envelope and AS2),
 /// and a control character in the AS2 JSON takes six bytes. So `check_intake` is asked about the

@@ -6,7 +6,7 @@
 //! The Rust form of `Follows` in `groups.capnp`.
 
 use async_trait::async_trait;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use crate::error::Result;
 use crate::model::{Delivery, Offer, Right, Source};

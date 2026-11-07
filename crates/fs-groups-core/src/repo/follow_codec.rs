@@ -3,7 +3,7 @@
 //! Pattern: Adapter — like `codec.rs`: the values are read from the index fields written next to the
 //! AS2 content; a malformed object reads as `None`.
 
-use fs_store::{ObjectId, StoredObject};
+use fs_objects::{ObjectId, StoredObject};
 
 use super::codec::{id_of, one};
 use super::consts::{DELIVERY_TYPE, SOURCE_TYPE};

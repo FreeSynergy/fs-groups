@@ -5,7 +5,7 @@ mod common;
 
 use common::{group_iri, group_with, site};
 use fs_groups_core::{Error, Follows, Right};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 #[tokio::test]
 async fn more_rights_than_the_giver_has_are_refused() {

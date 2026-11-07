@@ -5,7 +5,7 @@
 
 use std::collections::BTreeSet;
 
-use fs_store::{ObjectId, Query};
+use fs_objects::{ObjectId, Query};
 
 use super::handle::GroupRepo;
 use crate::error::Result;

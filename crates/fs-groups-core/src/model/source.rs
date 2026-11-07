@@ -3,7 +3,7 @@
 //! Pattern: State (small) + Value object — a source is `Active` until the giver withdraws it; the
 //! receiver may remove it at any time (then the record is gone).
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use super::Offer;
 

@@ -5,7 +5,7 @@ mod common;
 
 use common::{admin, group_iri, group_with, link, site};
 use fs_groups_core::{DeliveryState, Error, Follows, Member, Right, SourceState};
-use fs_store::Query;
+use fs_objects::Query;
 
 #[tokio::test]
 async fn following_does_not_touch_parents_or_cycles() {

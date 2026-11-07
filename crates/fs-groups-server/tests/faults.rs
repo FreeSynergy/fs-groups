@@ -16,11 +16,11 @@ use fs_groups_core::{
 };
 use fs_groups_server::GroupsServer;
 use fs_interfaces::rpc::{INVALID_REQUEST, Problem, TOO_LARGE, write_uuid};
-use fs_store::{ObjectId, Timestamp};
+use fs_objects::{ObjectId, Timestamp};
 
 struct Faulty(GroupRepo);
 
-fn store_error<T>(e: fs_store::Error) -> Result<T> {
+fn store_error<T>(e: fs_objects::Error) -> Result<T> {
     Err(Error::Store(e))
 }
 
@@ -30,25 +30,25 @@ impl Groups for Faulty {
         Groups::capabilities(&self.0)
     }
     async fn get(&self, id: ObjectId) -> Result<Option<Group>> {
-        store_error(fs_store::Error::NotFound(id))
+        store_error(fs_objects::Error::NotFound(id))
     }
     async fn list(&self, _: Option<&Cursor>) -> Result<Page<Group>> {
-        store_error(fs_store::Error::Backend("disk gone".into()))
+        store_error(fs_objects::Error::Backend("disk gone".into()))
     }
     async fn parents(&self, id: ObjectId) -> Result<Vec<ObjectId>> {
-        store_error(fs_store::Error::OriginalImmutable(id))
+        store_error(fs_objects::Error::OriginalImmutable(id))
     }
     async fn children(&self, _: ObjectId) -> Result<Vec<ObjectId>> {
-        store_error(fs_store::Error::Conflict("changed".into()))
+        store_error(fs_objects::Error::Conflict("changed".into()))
     }
     async fn rename(&self, _: ObjectId, _: &str) -> Result<Group> {
-        store_error(fs_store::Error::Invalid("no".into()))
+        store_error(fs_objects::Error::Invalid("no".into()))
     }
     async fn create(&self, name: &str, kind: &str) -> Result<Group> {
         Groups::create(&self.0, name, kind).await
     }
     async fn set_right_flow(&self, id: ObjectId, _: RightFlow) -> Result<Group> {
-        store_error(fs_store::Error::EncryptionRequired(id))
+        store_error(fs_objects::Error::EncryptionRequired(id))
     }
 }
 
@@ -68,7 +68,7 @@ impl Invitations for Faulty {
         Invitations::list(&self.0, group).await
     }
     async fn expire_due(&self, _: Timestamp) -> Result<usize> {
-        store_error(fs_store::Error::Backend("disk gone".into()))
+        store_error(fs_objects::Error::Backend("disk gone".into()))
     }
 }
 

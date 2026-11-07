@@ -3,7 +3,7 @@
 //! Pattern: Value object + Adapter — `as2` / `from_content` map between the typed value and the
 //! AS2 JSON that is the authoritative content (kind and parents are the `fs:` extension members).
 
-use fs_store::{Envelope, ObjectId};
+use fs_objects::{Envelope, ObjectId};
 use serde_json::{Value, json};
 
 use super::RightFlow;

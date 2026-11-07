@@ -7,7 +7,7 @@
 //! A relayed copy keeps `origin`, the first source (provisional); `source` is who sent it. **Not enforced:** `actor` is a string nobody authenticates,
 //! as for nesting (`DESIGN.md`).
 
-use fs_store::{ObjectId, Order, Query, StoredObject};
+use fs_objects::{ObjectId, Order, Query, StoredObject};
 use serde_json::json;
 
 use super::consts::{AS2_TYPE, CONTEXT, DELIVERY_TYPE};

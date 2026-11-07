@@ -11,8 +11,8 @@ use fs_groups_core::{GroupRepo, InvitationState, Invitations, Member};
 use fs_groups_server::GroupsServer;
 use fs_interfaces::groups_capnp::groups;
 use fs_interfaces::rpc::{bind_socket, connect, serve, write_uuid};
-use fs_store::traits::ObjectRepository;
-use fs_store::{Activity, LogEntry, ObjectId, Result, StoredObject, TursoStore};
+use fs_objects::traits::ObjectRepository;
+use fs_objects::{Activity, LogEntry, ObjectId, Result, StoredObject, TursoStore};
 
 const STEP: Duration = Duration::from_millis(40);
 const INTO_THE_WRITE: Duration = Duration::from_millis(60);

@@ -15,7 +15,7 @@ use fs_groups_core::{
 };
 use fs_groups_server::GroupsServer;
 use fs_interfaces::rpc::{Problem, TOO_LARGE, write_uuid};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 #[tokio::test(flavor = "current_thread")]
 async fn requests_that_cannot_be_read_are_the_request_s_fault() {

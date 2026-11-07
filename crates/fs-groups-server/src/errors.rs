@@ -43,19 +43,19 @@ pub(crate) fn rpc_error(e: Error) -> capnp::Error {
 
 /// What the store refuses is said by name; what it cannot do (backend, key, stored JSON) is a failure
 /// of this program.
-fn store_error(e: &fs_store::Error) -> capnp::Error {
+fn store_error(e: &fs_objects::Error) -> capnp::Error {
     let text = e.to_string();
     match e {
-        fs_store::Error::NotFound(_) => {
+        fs_objects::Error::NotFound(_) => {
             Problem::new(NOT_FOUND, "Not found", text, 404).into_error()
         }
-        fs_store::Error::Invalid(_) => invalid_request(text),
-        fs_store::Error::Conflict(_) | fs_store::Error::OriginalImmutable(_) => {
+        fs_objects::Error::Invalid(_) => invalid_request(text),
+        fs_objects::Error::Conflict(_) | fs_objects::Error::OriginalImmutable(_) => {
             Problem::new(CONFLICT, "Conflict", text, 409).into_error()
         }
-        fs_store::Error::EncryptionRequired(_)
-        | fs_store::Error::Key(_)
-        | fs_store::Error::Serde(_)
-        | fs_store::Error::Backend(_) => failed(text),
+        fs_objects::Error::EncryptionRequired(_)
+        | fs_objects::Error::Key(_)
+        | fs_objects::Error::Serde(_)
+        | fs_objects::Error::Backend(_) => failed(text),
     }
 }

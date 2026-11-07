@@ -3,7 +3,7 @@
 //! Pattern: State (small) + Value object — a delivery is `Active` until the giver revokes it, and
 //! never becomes active again. Following is not nesting: a delivery has no parent and no tree.
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use super::Right;
 

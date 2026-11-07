@@ -11,7 +11,7 @@ use fs_groups_core::{
     Memberships, Mirror, Page, Result, Right,
 };
 use fs_interfaces::Capabilities;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 /// A provider that can only read, for example a mirror of someone else's groups.
 struct ReadOnly;
@@ -135,7 +135,7 @@ async fn a_directory_that_cannot_apply_is_refused_plainly() {
         }
         async fn read(
             &self,
-            _: fs_store::ObjectId,
+            _: fs_objects::ObjectId,
         ) -> fs_groups_core::Result<Option<DirectoryGroup>> {
             Ok(None)
         }
@@ -150,7 +150,7 @@ async fn a_directory_that_cannot_apply_is_refused_plainly() {
     ));
     let err = ReadOnlyDir
         .apply(&DirectoryGroup {
-            id: fs_store::ObjectId::new(),
+            id: fs_objects::ObjectId::new(),
             name: String::new(),
             members: vec![],
             nested: vec![],

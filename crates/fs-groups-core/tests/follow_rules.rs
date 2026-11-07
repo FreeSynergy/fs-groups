@@ -2,7 +2,7 @@
 
 use fs_groups_core::follow_rules::{from_origin, local_group, may_pass_on, normalise, within};
 use fs_groups_core::{Offer, Right, Source, SourceState};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 fn source(pass_on: bool, state: SourceState) -> Source {
     Source {
