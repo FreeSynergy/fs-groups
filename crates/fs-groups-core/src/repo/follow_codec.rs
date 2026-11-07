@@ -6,6 +6,7 @@
 use fs_store::{ObjectId, StoredObject};
 
 use super::codec::{id_of, one};
+use super::consts::{DELIVERY_TYPE, SOURCE_TYPE};
 use crate::model::{Delivery, DeliveryState, Offer, Right, Source, SourceState};
 
 fn rights(o: &StoredObject) -> Option<Vec<Right>> {
@@ -47,6 +48,7 @@ pub(super) fn offer(o: &StoredObject) -> Option<Offer> {
 }
 
 pub(super) fn delivery(o: &StoredObject) -> Option<Delivery> {
+    (o.envelope.object_type == DELIVERY_TYPE).then_some(())?;
     let offer = offer(o)?;
     Some(Delivery {
         id: o.envelope.id,
@@ -60,6 +62,7 @@ pub(super) fn delivery(o: &StoredObject) -> Option<Delivery> {
 }
 
 pub(super) fn source(o: &StoredObject) -> Option<Source> {
+    (o.envelope.object_type == SOURCE_TYPE).then_some(())?;
     Some(Source {
         id: o.envelope.id,
         group: id_of(o, "group")?,

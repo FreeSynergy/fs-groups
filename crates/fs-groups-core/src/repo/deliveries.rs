@@ -177,6 +177,14 @@ impl Writer<'_> {
 
     /// Set the `state` of a stored delivery or source (index and content).
     pub(super) async fn set_text_state(&self, mut o: StoredObject, state: &str) -> Result<()> {
+        if o.index
+            .get("state")
+            .and_then(|v| v.first())
+            .map(String::as_str)
+            == Some(state)
+        {
+            return Ok(()); // already there: nothing is written, nothing is told
+        }
         o.index.insert("state".into(), vec![state.into()]);
         o.content["fs:state"] = json!(state);
         self.put(o).await
