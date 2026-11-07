@@ -34,15 +34,16 @@ pub use graph::Graph;
 pub use invitation_state::Step;
 pub use mirror::{Change, Divergence, Mirror, SyncReport, plan};
 pub use model::{
-    Cursor, Delegation, EffectiveMember, Group, Invitation, InvitationState, Member, Membership,
-    Page, ParentRequest, RequestState, Right, RightFlow,
+    Cursor, Delegation, Delivery, DeliveryState, EffectiveMember, Group, Invitation,
+    InvitationState, Member, Membership, Offer, Page, ParentRequest, RequestState, Right,
+    RightFlow, Source, SourceState,
 };
 pub use repo::{
     CONTEXT, DELEGATION_TYPE, GROUP_TYPE, GroupRepo, INVITATION_TYPE, MEMBERSHIP_TYPE,
     PARENT_REQUEST_TYPE,
 };
 pub use traits::{
-    Delegations, DirectoryGroup, GroupChange, GroupDirectory, GroupFeed, GroupListener, Groups,
-    Invitations, Memberships, Registry, Subscription,
+    Delegations, DirectoryGroup, Follows, GroupChange, GroupDirectory, GroupFeed, GroupListener,
+    Groups, Invitations, Memberships, Registry, Subscription,
 };
 pub use unsupported::not_possible;

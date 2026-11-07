@@ -154,3 +154,5 @@ impl GroupFeed for GroupRepo {
         self.feed.add(listener)
     }
 }
+
+impl crate::traits::Follows for GroupRepo {}

@@ -1,8 +1,10 @@
 //! Following between independent groups (ADR 0056, "Einseitig folgen"): which pattern, and why.
 //!
 //! Pattern: Specification (this file, pure predicates) + State (the life of a delivery and of a source)
-//! + Repository (the sources a group takes in, the deliveries it makes). Following is **not** nesting:
-//! there are no parents and no tree, so `graph.rs` and `nesting.rs` are not touched.
+//! + Repository (the sources a group takes in, the deliveries it makes).
+//!
+//! Following is **not** nesting: there are no parents and no tree, so `graph.rs` and `nesting.rs`
+//! are not touched.
 //!
 //! * *Repository, turned round:* the giver **delivers**, the receiver **keeps a list of sources**. A
 //!   group's sources are what it has been offered, like the remotes of a version-control repository.
