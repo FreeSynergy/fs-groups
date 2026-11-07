@@ -42,7 +42,7 @@ pub trait Follows: Send + Sync {
     }
     /// `follow.deliver`: the giver ends a delivery, any time. Deliveries relayed from it are not
     /// affected here (they live on the receiver's server, which learns through `withdraw`).
-    async fn revoke(&self, _delivery: ObjectId) -> Result<()> {
+    async fn revoke_delivery(&self, _delivery: ObjectId) -> Result<()> {
         not_possible("follow.deliver")
     }
     /// `follow.read`: the deliveries `group` makes, any state, oldest first.

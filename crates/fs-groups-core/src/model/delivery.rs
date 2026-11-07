@@ -66,3 +66,15 @@ pub struct Offer {
     /// Whether the receiver may pass it on.
     pub pass_on: bool,
 }
+
+impl Offer {
+    /// The offer as the AS2 `Invite` that travels to the receiver (proposal).
+    pub fn as2(&self) -> serde_json::Value {
+        serde_json::json!({
+            "@context": ["https://www.w3.org/ns/activitystreams", {"fs": super::NS}],
+            "type": "Invite", "actor": self.source, "object": self.source, "target": self.recipient,
+            "fs:delivery": self.delivery.to_string(), "fs:passOn": self.pass_on,
+            "fs:rights": self.rights.iter().map(|r| r.as_str()).collect::<Vec<_>>(),
+        })
+    }
+}

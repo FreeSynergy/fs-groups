@@ -1,19 +1,23 @@
 //! Following leaves "belongs to" alone, and tidies up when a group goes or a source is lost.
-//! Tests against the `Follows` trait (provisional, ADR 0056). Not built yet: ignored until the implementation.
+//! Tests against the `Follows` trait (provisional, ADR 0056).
 
 mod common;
 
-use common::{group_iri, group_with, link, site};
-use fs_groups_core::{DeliveryState, Error, Follows, Right, SourceState};
+use common::{admin, group_iri, group_with, link, site};
+use fs_groups_core::{DeliveryState, Error, Follows, Member, Right, SourceState};
 use fs_store::Query;
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn following_does_not_touch_parents_or_cycles() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
-    let top = group_with(&a, "a.example", "Top", &[Right::Read]).await;
-    let sub = group_with(&a, "a.example", "Sub", &[Right::Read]).await;
+    let top = a.create("Top", "team").await.unwrap();
+    let sub = a.create("Sub", "team").await.unwrap();
     link(&a, sub.id, top.id).await;
+    for g in [top.id, sub.id] {
+        a.grant(g, Member::Person(admin("a.example")), Right::Read)
+            .await
+            .unwrap();
+    }
     let gb = group_with(&b, "b.example", "B", &[Right::Read]).await;
     let before = (
         a.parents(sub.id).await.unwrap(),
@@ -51,7 +55,6 @@ async fn following_does_not_touch_parents_or_cycles() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn following_gives_nobody_a_membership() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "A", &[Right::Read]).await;
@@ -71,7 +74,6 @@ async fn following_gives_nobody_a_membership() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn deleting_a_group_clears_its_deliveries_and_sources() {
     let ((a, sa), (b, sb)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "A", &[Right::Read]).await;
@@ -119,14 +121,13 @@ async fn deleting_a_group_clears_its_deliveries_and_sources() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn losing_a_source_revokes_what_was_relayed_from_it() {
     let ((a, _), (b, _), (c, _)) = (
         site("a.example").await,
         site("b.example").await,
         site("c.example").await,
     );
-    let ga = group_with(&a, "a.example", "A", &[Right::Read]).await;
+    let ga = group_with(&a, "a.example", "A", &[Right::Read, Right::AddMembers]).await;
     let gb = b.create("B", "team").await.unwrap();
     let gc = c.create("C", "team").await.unwrap();
     let (d, o) = Follows::deliver(
@@ -153,7 +154,7 @@ async fn losing_a_source_revokes_what_was_relayed_from_it() {
         &a,
         ga.id,
         &group_iri("b.example", gb.id),
-        &[Right::Read],
+        &[Right::Read, Right::AddMembers],
         true,
     )
     .await

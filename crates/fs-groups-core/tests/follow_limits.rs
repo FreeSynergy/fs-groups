@@ -1,5 +1,5 @@
 //! Following: never more than the giver has, passing on only with permission, the sender is the origin.
-//! Tests against the `Follows` trait (provisional, ADR 0056). Not built yet: ignored until the implementation.
+//! Tests against the `Follows` trait (provisional, ADR 0056).
 
 mod common;
 
@@ -8,7 +8,6 @@ use fs_groups_core::{Error, Follows, Right};
 use fs_store::ObjectId;
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn more_rights_than_the_giver_has_are_refused() {
     let (a, _) = site("a.example").await;
     let ga = group_with(&a, "a.example", "Giver", &[Right::Read]).await;
@@ -22,7 +21,6 @@ async fn more_rights_than_the_giver_has_are_refused() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn manage_is_never_delivered() {
     let (a, _) = site("a.example").await;
     let ga = group_with(&a, "a.example", "Giver", &[Right::Read, Right::AddMembers]).await;
@@ -34,7 +32,6 @@ async fn manage_is_never_delivered() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn passing_on_without_permission_is_refused() {
     let ((a, _), (b, _), (c, _)) = (
         site("a.example").await,
@@ -62,7 +59,6 @@ async fn passing_on_without_permission_is_refused() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn passing_on_with_permission_works_within_what_was_given() {
     let ((a, _), (b, _), (c, _)) = (
         site("a.example").await,
@@ -99,7 +95,6 @@ async fn passing_on_with_permission_works_within_what_was_given() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn a_relayed_copy_is_not_passable_again() {
     let ((a, _), (b, _), (c, _)) = (
         site("a.example").await,
@@ -131,7 +126,6 @@ async fn a_relayed_copy_is_not_passable_again() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn an_offer_from_another_origin_is_refused() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "A", &[Right::Read]).await;
@@ -159,7 +153,6 @@ async fn an_offer_from_another_origin_is_refused() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn an_unknown_group_is_an_error() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "A", &[Right::Read]).await;

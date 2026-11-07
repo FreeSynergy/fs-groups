@@ -56,7 +56,7 @@ Version 0.3.0. **Several rules below are provisional: the owner is still answeri
 | `repo/notify.rs` | Decorator | wraps the store's `ObjectRepository`, so no write path can forget to tell the feed |
 | `fs-groups-server/{groups,items,nesting,memberships,invitations,delegations}_service.rs` | Adapter + Factory | wire in, one trait call, wire out; depends on the traits only |
 | `fs-groups-server/{wire/*,errors,feed}.rs` | Adapter, Observer | values on the wire with their limits, core errors as RFC 9457 problems, `GroupFeed` to the shared forwarder |
-| `follow_rules.rs` (planned, see Following) | Specification (pure) + State + Repository | following between independent groups; not a tree, parents and cycles untouched. Repository turned round: the giver delivers, the receiver lists sources; State for delivery and source; Specification for "never more than the giver has", "pass on only with permission", "the sender is the origin" |
+| `follow_rules.rs`, `repo/deliveries.rs`, `repo/sources.rs`, `repo/follow_codec.rs` | Specification (pure) + State + Repository | following between independent groups; not a tree, parents and cycles untouched. Repository turned round: the giver delivers, the receiver lists sources; State for delivery and source; Specification for "never more than the giver has", "pass on only with permission", "the sender is the origin" |
 | `mirror/plan.rs` | Specification (pure) | create / update / keep / remove decided without I/O |
 | `repo/mirror.rs` | Repository | wanted state + the ledger of mirrored ids |
 
@@ -151,6 +151,13 @@ and following never touches it.
 Order of work on branch `follow`: (1) pattern, (2) contract and trait, answering `Unsupported`, (3) tests against the trait,
 (4) implementation. Assumptions (all provisional): `Manage` is never delivered to a foreign group; a relayed delivery is not
 passable again; revoking or removing a source revokes the deliveries relayed from it; the host authenticates the sender.
+Stored as `Delivery` (giver side, index `group` = giving group) and `Source` (receiver side, index `group` = receiving group), so
+`delete` clears both without extra code. `receive` checks only that the offer's source lies at the origin the transport named
+(`follow_rules::from_origin`): **nothing authenticates that origin**, so a host that passes any name defeats it. Without that, anybody
+could enter themselves as a source of somebody else (the harm is a false entry, not a right: a right only ever lies on the giver's
+own server). Entering without confirmation also means anybody can fill a group's source list; the receiver removes entries. Revoking
+needs a message `withdraw` to the receiver; if it never arrives the entry stays `Active` there (the giver's own record is what counts).
+`deliver` asks `may_do` of the acting person; `pass_on`, `revoke_delivery`, `remove_source` do not ask who acts (same gap as nesting).
 
 ## Open points
 

@@ -19,7 +19,7 @@
 )]
 
 mod error;
-mod follow_rules;
+pub mod follow_rules;
 pub mod graph;
 mod invitation_state;
 pub mod mirror;
@@ -39,8 +39,8 @@ pub use model::{
     RightFlow, Source, SourceState,
 };
 pub use repo::{
-    CONTEXT, DELEGATION_TYPE, GROUP_TYPE, GroupRepo, INVITATION_TYPE, MEMBERSHIP_TYPE,
-    PARENT_REQUEST_TYPE,
+    CONTEXT, DELEGATION_TYPE, DELIVERY_TYPE, GROUP_TYPE, GroupRepo, INVITATION_TYPE,
+    MEMBERSHIP_TYPE, PARENT_REQUEST_TYPE, SOURCE_TYPE,
 };
 pub use traits::{
     Delegations, DirectoryGroup, Follows, GroupChange, GroupDirectory, GroupFeed, GroupListener,

@@ -8,7 +8,7 @@ use fs_interfaces::Capabilities;
 use super::handle::GroupRepo;
 
 /// Capability ids that `GroupRepo` provides.
-const SUPPORTED: [&str; 14] = [
+const SUPPORTED: [&str; 17] = [
     "group.create",
     "group.update",
     "group.delete",
@@ -23,6 +23,9 @@ const SUPPORTED: [&str; 14] = [
     "invite.read",
     "right.grant",
     "right.read",
+    "follow.deliver",
+    "follow.receive",
+    "follow.read",
 ];
 
 impl GroupRepo {

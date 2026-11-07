@@ -1,5 +1,5 @@
 //! Following: the giver delivers, the receiver is told and enters the source, nobody confirms.
-//! Tests against the `Follows` trait (provisional, ADR 0056). Not built yet: ignored until the implementation.
+//! Tests against the `Follows` trait (provisional, ADR 0056).
 
 mod common;
 
@@ -7,7 +7,6 @@ use common::{group_iri, group_with, site};
 use fs_groups_core::{Follows, Right, SourceState};
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn a_delivery_is_entered_without_confirmation() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "Giver", &[Right::Read]).await;
@@ -25,7 +24,6 @@ async fn a_delivery_is_entered_without_confirmation() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn the_receiver_sees_what_is_offered() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "Giver", &[Right::Read, Right::AddMembers]).await;
@@ -43,7 +41,6 @@ async fn the_receiver_sees_what_is_offered() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn receiving_the_same_offer_twice_keeps_one_source() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "Giver", &[Right::Read]).await;
@@ -64,7 +61,6 @@ async fn receiving_the_same_offer_twice_keeps_one_source() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn the_receiver_can_remove_the_source() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "Giver", &[Right::Read]).await;
@@ -87,7 +83,6 @@ async fn the_receiver_can_remove_the_source() {
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn the_giver_revokes_at_any_time() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "Giver", &[Right::Read]).await;
@@ -102,18 +97,17 @@ async fn the_giver_revokes_at_any_time() {
     .await
     .unwrap();
     Follows::receive(&b, "a.example", &offer).await.unwrap();
-    Follows::revoke(&a, d.id).await.unwrap();
+    Follows::revoke_delivery(&a, d.id).await.unwrap();
     let after = Follows::deliveries(&a, ga.id).await.unwrap();
     assert_eq!(after[0].state, fs_groups_core::DeliveryState::Revoked);
     let s = Follows::withdraw(&b, "a.example", &offer.source, d.id)
         .await
         .unwrap();
     assert_eq!(s.state, SourceState::Withdrawn);
-    Follows::revoke(&a, d.id).await.unwrap(); // again: nothing changes
+    Follows::revoke_delivery(&a, d.id).await.unwrap(); // again: nothing changes
 }
 
 #[tokio::test]
-#[ignore = "following is not built yet"]
 async fn following_may_be_mutual() {
     let ((a, _), (b, _)) = (site("a.example").await, site("b.example").await);
     let ga = group_with(&a, "a.example", "A", &[Right::Read]).await;
