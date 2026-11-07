@@ -253,3 +253,40 @@ pub fn faulty_repo(
     });
     GroupRepo::with_backend(f.clone(), f, ME).with_instance("example.org")
 }
+
+/// A site: its own store, instance name and acting person (`https://<instance>/users/admin`).
+pub async fn site(instance: &str) -> (GroupRepo, Arc<dyn Store>) {
+    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let actor = format!("https://{instance}/users/admin");
+    (
+        GroupRepo::new(store.clone(), actor).with_instance(instance),
+        store,
+    )
+}
+
+/// The acting person of a [`site`].
+pub fn admin(instance: &str) -> String {
+    format!("https://{instance}/users/admin")
+}
+
+/// The IRI of group `id` on `instance`.
+pub fn group_iri(instance: &str, id: ObjectId) -> String {
+    format!("https://{instance}/groups/{id}")
+}
+
+/// A group on a [`site`] where the acting person holds exactly `rights`.
+pub async fn group_with(
+    r: &GroupRepo,
+    instance: &str,
+    name: &str,
+    rights: &[fs_groups_core::Right],
+) -> fs_groups_core::Group {
+    use fs_groups_core::Member;
+    let g = r.create(name, "team").await.unwrap();
+    for right in rights {
+        r.grant(g.id, Member::Person(admin(instance)), *right)
+            .await
+            .unwrap();
+    }
+    g
+}
