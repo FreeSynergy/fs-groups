@@ -2,7 +2,7 @@
 //!
 //! Pattern: Value objects + Specification (`Right::covers` is the one rule: `manage` implies all).
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use super::Member;
 

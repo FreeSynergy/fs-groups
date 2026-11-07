@@ -117,7 +117,7 @@ async fn only_what_we_mirrored_is_ever_removed() {
     let (r, _, _) = world().await;
     let dir = FakeDirectory::default();
     let foreign = DirectoryGroup {
-        id: fs_store::ObjectId::new(),
+        id: fs_objects::ObjectId::new(),
         name: "not ours".into(),
         members: vec![],
         nested: vec![],

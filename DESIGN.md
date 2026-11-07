@@ -1,7 +1,7 @@
 # fs-groups – Design
 
 `fs-groups` is the groups program of FreeSynergy. This repo holds the **program core** (`crates/fs-groups-core`, no GUI) and its **Cap'n Proto server** (`crates/fs-groups-server`).
-A group is an **AS2 `Group`** in an envelope stored through `fs-store` (ADR 0014, 0020, 0050). It runs alone, without any
+A group is an **AS2 `Group`** in an envelope stored through `fs-objects` (ADR 0014, 0020, 0050). It runs alone, without any
 directory (ADR 0024); a directory is only a mirror (ADR 0047). Contract: `groups.capnp` in `fs-interfaces` (draft; **temporarily the branch `groups-members-cursor`**, until `run_to_end` and the `Memberships` cursor are tagged, then pin the tag).
 
 ## State
@@ -151,5 +151,5 @@ Version 0.3.0. **Several rules below are provisional: the owner is still answeri
 
 ## Crates
 
-Core: `fs-store` (git tag v0.2.0), `fs-interfaces` (temporarily branch `groups-members-cursor`, then a tag), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full). Server: also `fs-interfaces` feature `rpc`, `capnp`, `capnp-rpc`; dev: `tempfile`, `uuid`.
+Core: `fs-objects` (git tag v0.2.0), `fs-interfaces` (temporarily branch `groups-members-cursor`, then a tag), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full). Server: also `fs-interfaces` feature `rpc`, `capnp`, `capnp-rpc`; dev: `tempfile`, `uuid`.
 All MIT / Apache-2.0. No Kanidm dependency of any kind.

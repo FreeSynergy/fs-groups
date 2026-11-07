@@ -10,9 +10,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use async_trait::async_trait;
 use fs_groups_core::{DirectoryGroup, Error, GroupDirectory, GroupRepo, Result};
 use fs_interfaces::Capabilities;
-use fs_store::traits::{ObjectQuery, ObjectRepository};
-use fs_store::{Activity, LogEntry, ObjectId, Query, StoredObject};
-use fs_store::{Store, Timestamp, TursoStore};
+use fs_objects::traits::{ObjectQuery, ObjectRepository};
+use fs_objects::{Activity, LogEntry, ObjectId, Query, StoredObject};
+use fs_objects::{Store, Timestamp, TursoStore};
 
 pub const ME: &str = "https://local.invalid/users/owner";
 
@@ -142,7 +142,7 @@ async fn pause() {
 
 #[async_trait]
 impl ObjectRepository for Slow {
-    async fn put(&self, o: StoredObject, actor: &str) -> fs_store::Result<Activity> {
+    async fn put(&self, o: StoredObject, actor: &str) -> fs_objects::Result<Activity> {
         Store::put(&*self.0, o, actor).await
     }
     async fn put_and_log(
@@ -150,27 +150,27 @@ impl ObjectRepository for Slow {
         o: StoredObject,
         actor: &str,
         extra: Vec<LogEntry>,
-    ) -> fs_store::Result<Vec<Activity>> {
+    ) -> fs_objects::Result<Vec<Activity>> {
         Store::put_and_log(&*self.0, o, actor, extra).await
     }
-    async fn get(&self, id: ObjectId) -> fs_store::Result<Option<StoredObject>> {
+    async fn get(&self, id: ObjectId) -> fs_objects::Result<Option<StoredObject>> {
         let r = Store::get(&*self.0, id).await;
         pause().await;
         r
     }
-    async fn delete(&self, id: ObjectId, actor: &str) -> fs_store::Result<Activity> {
+    async fn delete(&self, id: ObjectId, actor: &str) -> fs_objects::Result<Activity> {
         Store::delete(&*self.0, id, actor).await
     }
 }
 
 #[async_trait]
 impl ObjectQuery for Slow {
-    async fn query(&self, q: &Query) -> fs_store::Result<Vec<StoredObject>> {
+    async fn query(&self, q: &Query) -> fs_objects::Result<Vec<StoredObject>> {
         let r = Store::query(&*self.0, q).await;
         pause().await;
         r
     }
-    async fn count(&self, q: &Query) -> fs_store::Result<usize> {
+    async fn count(&self, q: &Query) -> fs_objects::Result<usize> {
         Store::count(&*self.0, q).await
     }
 }
@@ -199,13 +199,13 @@ pub struct Faulty {
     pub fail_query: Box<dyn Fn(&Query) -> bool + Send + Sync>,
 }
 
-fn injected() -> fs_store::Error {
-    fs_store::Error::Invalid("injected fault".into())
+fn injected() -> fs_objects::Error {
+    fs_objects::Error::Invalid("injected fault".into())
 }
 
 #[async_trait]
 impl ObjectRepository for Faulty {
-    async fn put(&self, o: StoredObject, actor: &str) -> fs_store::Result<Activity> {
+    async fn put(&self, o: StoredObject, actor: &str) -> fs_objects::Result<Activity> {
         if (self.fail_put)(&o) {
             return Err(injected());
         }
@@ -216,26 +216,26 @@ impl ObjectRepository for Faulty {
         o: StoredObject,
         actor: &str,
         extra: Vec<LogEntry>,
-    ) -> fs_store::Result<Vec<Activity>> {
+    ) -> fs_objects::Result<Vec<Activity>> {
         Store::put_and_log(&*self.inner, o, actor, extra).await
     }
-    async fn get(&self, id: ObjectId) -> fs_store::Result<Option<StoredObject>> {
+    async fn get(&self, id: ObjectId) -> fs_objects::Result<Option<StoredObject>> {
         Store::get(&*self.inner, id).await
     }
-    async fn delete(&self, id: ObjectId, actor: &str) -> fs_store::Result<Activity> {
+    async fn delete(&self, id: ObjectId, actor: &str) -> fs_objects::Result<Activity> {
         Store::delete(&*self.inner, id, actor).await
     }
 }
 
 #[async_trait]
 impl ObjectQuery for Faulty {
-    async fn query(&self, q: &Query) -> fs_store::Result<Vec<StoredObject>> {
+    async fn query(&self, q: &Query) -> fs_objects::Result<Vec<StoredObject>> {
         if (self.fail_query)(q) {
             return Err(injected());
         }
         Store::query(&*self.inner, q).await
     }
-    async fn count(&self, q: &Query) -> fs_store::Result<usize> {
+    async fn count(&self, q: &Query) -> fs_objects::Result<usize> {
         Store::count(&*self.inner, q).await
     }
 }

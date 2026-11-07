@@ -35,7 +35,7 @@ async fn the_default_is_none_and_the_setting_is_kept() {
         .unwrap();
     assert_eq!(again.right_flow, RightFlow::Down);
     assert!(
-        r.set_right_flow(fs_store::ObjectId::new(), RightFlow::Up)
+        r.set_right_flow(fs_objects::ObjectId::new(), RightFlow::Up)
             .await
             .is_err()
     );

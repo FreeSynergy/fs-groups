@@ -6,7 +6,7 @@
 
 use std::collections::BTreeSet;
 
-use fs_store::{ObjectId, Order, Query};
+use fs_objects::{ObjectId, Order, Query};
 
 use super::consts::{CONTEXT, GROUP_TYPE};
 use super::handle::{GroupRepo, Writer};

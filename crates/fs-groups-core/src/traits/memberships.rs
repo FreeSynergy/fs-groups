@@ -4,7 +4,7 @@
 //! Role ids are opaque strings; their definitions stay in fs-people (ADR 0052).
 
 use async_trait::async_trait;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use crate::error::Result;
 use crate::model::{EffectiveMember, Member, Membership};

@@ -3,7 +3,7 @@
 //! Pattern: Adapter — the ids and states are read from the index fields written next to the AS2
 //! content (the content is the standard-shaped view); a malformed object reads as `None`.
 
-use fs_store::{ObjectId, StoredObject};
+use fs_objects::{ObjectId, StoredObject};
 
 use crate::model::{
     Delegation, Invitation, InvitationState, Member, Membership, ParentRequest, RequestState, Right,

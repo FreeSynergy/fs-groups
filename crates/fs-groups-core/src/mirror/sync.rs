@@ -7,7 +7,7 @@
 use std::collections::BTreeSet;
 
 use async_trait::async_trait;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use super::plan::{Change, plan};
 use super::report::{Divergence, SyncReport};

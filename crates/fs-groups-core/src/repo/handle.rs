@@ -18,8 +18,8 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex as StdMutex, OnceLock, PoisonError, Weak};
 
-use fs_store::traits::{ObjectQuery, ObjectRepository};
-use fs_store::{ObjectId, Store, StoredObject};
+use fs_objects::traits::{ObjectQuery, ObjectRepository};
+use fs_objects::{ObjectId, Store, StoredObject};
 use tokio::sync::{Mutex, MutexGuard};
 
 use super::backend::StoreAdapter;

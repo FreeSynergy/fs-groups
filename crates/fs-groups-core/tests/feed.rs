@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use common::{person, repo};
 use fs_groups_core::{GroupChange, GroupFeed, GroupListener, Member};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 #[derive(Default)]
 struct Seen(Mutex<Vec<GroupChange>>);

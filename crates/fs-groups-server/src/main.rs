@@ -9,7 +9,7 @@ use std::sync::Arc;
 use fs_groups_core::GroupRepo;
 use fs_groups_server::GroupsServer;
 use fs_interfaces::rpc::{ServerOptions, prepare_data_dir, run_until_signal};
-use fs_store::{Store, TursoStore};
+use fs_objects::{Store, TursoStore};
 
 fn main() {
     let options = ServerOptions::from_env_or_exit("groups");

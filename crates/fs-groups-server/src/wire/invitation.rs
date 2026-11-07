@@ -6,7 +6,7 @@ use fs_groups_core::{Invitation, InvitationState};
 use fs_interfaces::common_capnp::timestamp;
 use fs_interfaces::groups_capnp::{self, invitation};
 use fs_interfaces::rpc::{from_millis, to_millis, write_object_id};
-use fs_store::Timestamp;
+use fs_objects::Timestamp;
 
 use super::basic::{ENTRY_BYTES, list_len, request};
 

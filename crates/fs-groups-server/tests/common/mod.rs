@@ -10,7 +10,7 @@ use fs_interfaces::groups_capnp::{delegations, groups, invitations, items, membe
 use fs_interfaces::rpc::{
     Problem, bind_socket, connect, read_envelope, read_uuid, serve, write_uuid,
 };
-use fs_store::{Store, TursoStore};
+use fs_objects::{Store, TursoStore};
 use uuid::Uuid;
 
 pub const ME: &str = "https://local.invalid/users/owner";
@@ -128,7 +128,7 @@ pub fn ids(
 
 /// A fresh id nothing has.
 pub fn unknown() -> Uuid {
-    fs_store::ObjectId::new().as_uuid()
+    fs_objects::ObjectId::new().as_uuid()
 }
 
 /// The problem type URI of this program's `name`.

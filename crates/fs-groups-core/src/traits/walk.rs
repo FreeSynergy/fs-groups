@@ -5,7 +5,7 @@
 
 use std::collections::{BTreeSet, VecDeque};
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use super::Groups;
 use crate::error::Result;

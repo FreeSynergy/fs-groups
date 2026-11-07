@@ -6,7 +6,7 @@
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use fs_store::{Envelope, ObjectId};
+use fs_objects::{Envelope, ObjectId};
 
 /// What happened to a group, membership, invitation or delegation; `envelope.object_type` tells which.
 #[derive(Clone, Debug, PartialEq)]

@@ -19,7 +19,7 @@ use fs_interfaces::Capabilities;
 use fs_interfaces::common_capnp::{change, change_listener};
 use fs_interfaces::groups_capnp::Right;
 use fs_interfaces::rpc::{read_envelope, read_uuid, write_uuid};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 #[derive(Clone, Default)]
 struct Seen(Rc<RefCell<Vec<String>>>);
