@@ -20,7 +20,7 @@ fn main() {
             .map_err(std::io::Error::other)?;
         let store: Arc<dyn Store> = Arc::new(store);
         let repo = GroupRepo::new(store, options.actor.clone()).with_ai_marking(Arc::new(
-            fs_groups_server::OperatorIsHuman(options.actor.clone()),
+            fs_groups_server::OperatorIsHuman::new(&options.actor),
         ));
         let repo = match &options.instance {
             Some(instance) => repo.with_instance(instance),

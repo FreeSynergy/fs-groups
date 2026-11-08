@@ -7,7 +7,7 @@ use fs_groups_core::{Delivery, DeliveryState, Offer, Right, Source, SourceState}
 use fs_interfaces::groups_capnp::{self, delivery, offer, source};
 use fs_interfaces::rpc::{invalid_request, read_object_id, write_object_id};
 
-use super::basic::{ENTRY_BYTES, list_len};
+use super::basic::{ENTRY_BYTES, list_len, read_identifier};
 use super::delegation::{read_right, right_to_wire};
 
 /// The most rights a list can name: there are four, so more is a malformed request.
@@ -80,10 +80,7 @@ pub(crate) fn write_offer(mut out: offer::Builder<'_>, o: &Offer) {
 pub(crate) fn read_offer(r: capnp::Result<offer::Reader<'_>>) -> capnp::Result<Offer> {
     let r = r?;
     let text = |t: capnp::Result<capnp::text::Reader<'_>>| -> capnp::Result<String> {
-        Ok(t?
-            .to_str()
-            .map_err(|e| invalid_request(e.to_string()))?
-            .to_string())
+        Ok(read_identifier(t)?.to_string())
     };
     Ok(Offer {
         delivery: read_object_id(r.get_delivery()?)?,
