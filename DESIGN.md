@@ -6,7 +6,7 @@ directory (ADR 0024); a directory is only a mirror (ADR 0047). Contract: `groups
 
 ## State
 
-Version 0.2.0. **Several rules below are provisional: the owner is still answering what up and down mean and who consents to a nesting link.** A tag is fine as long as these points stay marked provisional.
+Version 0.3.0 (tag v0.3.0; header corrected 2026-11-08). **Several rules below are provisional: the owner is still answering what up and down mean and who consents to a nesting link.** A tag is fine as long as these points stay marked provisional.
 
 | Area | State |
 |---|---|
