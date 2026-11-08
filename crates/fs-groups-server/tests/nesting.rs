@@ -67,8 +67,11 @@ async fn a_link_exists_only_after_approval_and_reads_follow_it() {
         write_uuid(remove.get().init_parent(), Some(mid));
         let removed = remove.send().promise.await.unwrap();
         let g = removed.get().unwrap().get_group().unwrap();
-        assert!(ids(g.get_parents().unwrap()).is_empty());
-        assert!(read_ids!(items, children_request, mid).is_empty());
+        assert_eq!(ids(g.get_parents().unwrap()), [] as [uuid::Uuid; 0]);
+        assert_eq!(
+            read_ids!(items, children_request, mid),
+            [] as [uuid::Uuid; 0]
+        );
     })
     .await;
 }
@@ -111,7 +114,7 @@ async fn declining_leaves_no_link_and_a_second_answer_is_refused() {
         let mut decline = items.decline_parent_request();
         write_uuid(decline.get().init_request(), Some(asked));
         decline.send().promise.await.unwrap();
-        assert!(read_ids!(items, parents_request, a).is_empty());
+        assert_eq!(read_ids!(items, parents_request, a), [] as [uuid::Uuid; 0]);
 
         let mut again = items.approve_parent_request();
         write_uuid(again.get().init_request(), Some(asked));
@@ -143,7 +146,7 @@ async fn a_cycle_is_refused_when_asking_and_when_approving() {
         write_uuid(second.get().init_request(), Some(down));
         let e = second.send().promise.await.err().unwrap();
         assert_eq!(problem(&e), (409, gp("cycle")));
-        assert!(read_ids!(items, parents_request, b).is_empty());
+        assert_eq!(read_ids!(items, parents_request, b), [] as [uuid::Uuid; 0]);
     })
     .await;
 }

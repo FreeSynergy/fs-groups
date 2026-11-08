@@ -12,7 +12,7 @@ fn group(parents: &[ObjectId]) -> Group {
         name: id.to_string(),
         kind: String::new(),
         parents: parents.to_vec(),
-        right_flow: Default::default(),
+        right_flow: fs_groups_core::RightFlow::default(),
         envelope,
     }
 }

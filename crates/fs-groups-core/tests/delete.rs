@@ -41,7 +41,10 @@ async fn delete_removes_memberships_invitations_delegations_and_links() {
         r.parents(child.id).await.unwrap().is_empty(),
         "the link to the deleted parent is gone"
     );
-    assert!(r.children(parent.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.children(parent.id).await.unwrap(),
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert!(
         Delegations::list(&r, parent.id).await.unwrap().is_empty(),
         "rights it held are gone"
@@ -73,5 +76,8 @@ async fn a_group_holding_a_right_on_itself_can_be_deleted() {
         .unwrap();
     r.delete(g.id).await.unwrap();
     assert!(r.get(g.id).await.unwrap().is_none());
-    assert!(r.groups_of(&person("ada")).await.unwrap().is_empty());
+    assert_eq!(
+        r.groups_of(&person("ada")).await.unwrap(),
+        [] as [fs_objects::ObjectId; 0]
+    );
 }

@@ -28,7 +28,7 @@ async fn a_source_id_is_not_a_delivery_and_a_delivery_id_is_not_a_source() {
     let ga = group_with(&a, "a.example", "A", &[Right::Read]).await;
     let gb = group_with(&b, "b.example", "B", &[Right::Read]).await;
     let gc = c.create("C", "team").await.unwrap();
-    let (d, offer) = Follows::deliver(
+    let (deliv, offer) = Follows::deliver(
         &a,
         ga.id,
         &group_iri("b.example", gb.id),
@@ -37,11 +37,11 @@ async fn a_source_id_is_not_a_delivery_and_a_delivery_id_is_not_a_source() {
     )
     .await
     .unwrap();
-    let s = Follows::receive(&b, "a.example", &offer).await.unwrap();
-    Follows::pass_on(&b, s.id, &group_iri("c.example", gc.id), &[Right::Read])
+    let src = Follows::receive(&b, "a.example", &offer).await.unwrap();
+    Follows::pass_on(&b, src.id, &group_iri("c.example", gc.id), &[Right::Read])
         .await
         .unwrap();
-    let err = Follows::revoke_delivery(&b, s.id).await.unwrap_err();
+    let err = Follows::revoke_delivery(&b, src.id).await.unwrap_err();
     assert!(
         matches!(
             err,
@@ -54,7 +54,7 @@ async fn a_source_id_is_not_a_delivery_and_a_delivery_id_is_not_a_source() {
     );
     let relayed = Follows::deliveries(&b, gb.id).await.unwrap();
     assert_eq!(relayed[0].state, DeliveryState::Active);
-    let err = Follows::remove_source(&a, d.id).await.unwrap_err();
+    let err = Follows::remove_source(&a, deliv.id).await.unwrap_err();
     assert!(
         matches!(err, Error::NotFound { what: "source", .. }),
         "{err:?}"

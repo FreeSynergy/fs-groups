@@ -114,7 +114,10 @@ async fn delete_finishes(how: Leave) {
                 "the group lives on"
             );
             for p in &people {
-                assert!(repo.groups_of(p).await.unwrap().is_empty());
+                assert_eq!(
+                    repo.groups_of(p).await.unwrap(),
+                    [] as [fs_objects::ObjectId; 0]
+                );
             }
         };
         (call, check)

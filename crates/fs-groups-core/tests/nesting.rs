@@ -44,7 +44,10 @@ async fn a_group_cannot_be_its_own_parent() {
         panic!("expected a cycle error")
     };
     assert_eq!(path, [g[0].id]);
-    assert!(r.parents(g[0].id).await.unwrap().is_empty());
+    assert_eq!(
+        r.parents(g[0].id).await.unwrap(),
+        [] as [fs_objects::ObjectId; 0]
+    );
 }
 
 #[tokio::test]
@@ -123,7 +126,7 @@ async fn removing_a_link_leaves_both_groups() {
     let g = make(&r, &["a", "b"]).await;
     common::link(&r, g[0].id, g[1].id).await;
     let a = r.remove_parent(g[0].id, g[1].id).await.unwrap();
-    assert!(a.parents.is_empty());
+    assert_eq!(a.parents, [] as [fs_objects::ObjectId; 0]);
     assert!(r.get(g[1].id).await.unwrap().is_some());
     // now the other direction is allowed
     common::link(&r, g[1].id, g[0].id).await;

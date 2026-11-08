@@ -92,7 +92,10 @@ async fn blocker_1_a_retained_edge_is_checked_against_the_state_after_the_run() 
     let report = r.sync_to(&dir).await.unwrap();
     assert!(!closure_in(&dir, h.id).contains(BOT), "{:?}", dir.get(h.id));
     if closure_in(&dir, h.id).contains(BOT) {
-        assert!(report.left_out.is_empty());
+        assert_eq!(
+            report.left_out,
+            [] as [(fs_objects::ObjectId, std::vec::Vec<std::string::String>); 0]
+        );
     }
 }
 
@@ -113,9 +116,9 @@ async fn blocker_2_a_wanted_edge_does_not_let_an_agent_marked_later_stay() {
     r.sync_to(&dir).await.unwrap();
     // the agent is marked later, and u cannot be read any more
     agents.0.lock().unwrap().push(BOT.to_string());
-    let mut o = store.get(u.id).await.unwrap().unwrap();
-    o.content.as_object_mut().unwrap().remove("name");
-    store.put(o, ME).await.unwrap();
+    let mut obj = store.get(u.id).await.unwrap().unwrap();
+    obj.content.as_object_mut().unwrap().remove("name");
+    store.put(obj, ME).await.unwrap();
     // an unrelated membership change makes the sync write
     put(&r, &h, "pat").await;
     r.sync_to(&dir).await.unwrap();
@@ -197,11 +200,11 @@ async fn should_5_without_an_answer_ordinary_groups_lose_nobody_to_a_corrupt_del
     let dir = FakeDirectory::default();
     r.sync_to(&dir).await.unwrap();
     // the holder of the delegation can no longer be told, in the index and in the content
-    let mut o = store.get(d.id).await.unwrap().unwrap();
-    o.index.remove("holder_kind");
-    o.index.remove("holder");
-    o.content["subject"] = "garbage".into();
-    store.put(o, ME).await.unwrap();
+    let mut obj = store.get(d.id).await.unwrap().unwrap();
+    obj.index.remove("holder_kind");
+    obj.index.remove("holder");
+    obj.content["subject"] = "garbage".into();
+    store.put(obj, ME).await.unwrap();
     // a host that cannot tell anybody apart
     let silent = r.clone().with_ai_marking(Arc::new(common::NoAnswer));
     let report = silent.sync_to(&dir).await.unwrap();
@@ -210,7 +213,7 @@ async fn should_5_without_an_answer_ordinary_groups_lose_nobody_to_a_corrupt_del
         6,
         "an ordinary group loses nobody"
     );
-    assert!(!report.unreadable.is_empty());
+    assert_ne!(report.unreadable, [] as [fs_objects::ObjectId; 0]);
     assert!(
         report.unchecked.iter().any(|(id, _)| *id == g.id),
         "but it is reported"

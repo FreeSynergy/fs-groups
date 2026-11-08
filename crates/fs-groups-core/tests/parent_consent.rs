@@ -17,9 +17,18 @@ async fn provisional_asking_links_nothing_and_approving_does() {
     );
     let req = r.request_parent(c.id, p.id).await.unwrap();
     assert_eq!(req.state, RequestState::Pending);
-    assert!(r.parents(c.id).await.unwrap().is_empty());
-    assert!(r.children(p.id).await.unwrap().is_empty());
-    assert!(r.get(c.id).await.unwrap().unwrap().parents.is_empty());
+    assert_eq!(
+        r.parents(c.id).await.unwrap(),
+        [] as [fs_objects::ObjectId; 0]
+    );
+    assert_eq!(
+        r.children(p.id).await.unwrap(),
+        [] as [fs_objects::ObjectId; 0]
+    );
+    assert_eq!(
+        r.get(c.id).await.unwrap().unwrap().parents,
+        [] as [fs_objects::ObjectId; 0]
+    );
     let g = r.approve_parent(req.id).await.unwrap();
     assert_eq!(g.parents, [p.id]);
     assert_eq!(r.parents(c.id).await.unwrap(), [p.id]);
@@ -47,7 +56,10 @@ async fn declining_links_nothing_and_asking_again_is_possible() {
         "a pending request is returned, not doubled"
     );
     r.decline_parent(req.id).await.unwrap();
-    assert!(r.parents(c.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.parents(c.id).await.unwrap(),
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert!(r.approve_parent(req.id).await.is_err());
     let second = r.request_parent(c.id, p.id).await.unwrap();
     assert_ne!(second.id, req.id);
@@ -106,7 +118,10 @@ async fn a_loop_is_refused_when_asking_and_again_when_approving() {
         r.approve_parent(yx.id).await,
         Err(Error::Cycle { .. })
     ));
-    assert!(r.parents(y.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.parents(y.id).await.unwrap(),
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert!(matches!(
         r.request_parent(y.id, x.id).await,
         Err(Error::Cycle { .. })
@@ -135,7 +150,7 @@ async fn the_mirror_sees_approved_links_only() {
     let desired = r.desired().await.unwrap();
     let nested = |id| desired.iter().find(|g| g.id == id).unwrap().nested.clone();
     assert_eq!(nested(p.id), [c.id]);
-    assert!(nested(q.id).is_empty());
+    assert_eq!(nested(q.id), [] as [fs_objects::ObjectId; 0]);
 }
 
 #[tokio::test]
@@ -147,6 +162,9 @@ async fn deleting_a_group_removes_its_requests() {
     );
     let req = r.request_parent(c.id, p.id).await.unwrap();
     r.delete(c.id).await.unwrap();
-    assert!(r.parent_requests(p.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.parent_requests(p.id).await.unwrap(),
+        [] as [fs_groups_core::ParentRequest; 0]
+    );
     assert!(r.approve_parent(req.id).await.is_err());
 }

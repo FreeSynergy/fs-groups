@@ -166,7 +166,10 @@ async fn the_list_holds_this_group_only_and_extreme_times_do_not_break_it() {
         let i = invitations_of(&root).await;
         let (g, other) = (create(&items, "G").await, create(&items, "Other").await);
         invite(&i, other, ADA, None).await;
-        assert!(states(&i, g).await.is_empty());
+        assert_eq!(
+            states(&i, g).await,
+            [] as [fs_interfaces::groups_capnp::InvitationState; 0]
+        );
 
         // The largest time `from_millis` accepts must be stored and read back, or be refused plainly.
         let largest = 8_210_266_876_799_999;

@@ -106,6 +106,34 @@ async fn corrupt(store: &Arc<dyn Store>, rng: &mut Lcg, groups: &[Group], repo: 
     }
 }
 
+/// Markings, memberships and removals change between the two syncs.
+async fn churn(
+    repo: &GroupRepo,
+    groups: &[Group],
+    people: &[String],
+    marks: &Marks,
+    rng: &mut Lcg,
+) {
+    // things change: markings, memberships, damage, refusals
+    for p in people {
+        if rng.chance(25) {
+            marks.agents.lock().unwrap().insert(p.clone());
+        } else if rng.chance(15) {
+            marks.unknown.lock().unwrap().insert(p.clone());
+        }
+    }
+    for g in groups {
+        let p = &people[rng.next(people.len())];
+        if rng.chance(40) {
+            let _ = repo.add(g.id, Member::Person(p.clone()), "").await;
+        } else if rng.chance(30) {
+            if let Some(m) = repo.direct(g.id).await.unwrap().first() {
+                repo.remove(m.id).await.unwrap();
+            }
+        }
+    }
+}
+
 #[tokio::test]
 async fn no_prefix_of_any_run_puts_an_agent_or_unknown_into_an_administrative_closure() {
     let people: Vec<String> = (0..6).map(|n| person(&format!("p{n}"))).collect();
@@ -155,24 +183,7 @@ async fn no_prefix_of_any_run_puts_an_agent_or_unknown_into_an_administrative_cl
         }
         let rec = Recording::default();
         repo.sync_to(&rec).await.unwrap();
-        // things change: markings, memberships, damage, refusals
-        for p in &people {
-            if rng.chance(25) {
-                marks.agents.lock().unwrap().insert(p.clone());
-            } else if rng.chance(15) {
-                marks.unknown.lock().unwrap().insert(p.clone());
-            }
-        }
-        for g in &groups {
-            let p = &people[rng.next(people.len())];
-            if rng.chance(40) {
-                let _ = repo.add(g.id, Member::Person(p.clone()), "").await;
-            } else if rng.chance(30) {
-                if let Some(m) = repo.direct(g.id).await.unwrap().first() {
-                    repo.remove(m.id).await.unwrap();
-                }
-            }
-        }
+        churn(&repo, &groups, &people, &marks, &mut rng).await;
         for _ in 0..rng.next(3) {
             corrupt(&store, &mut rng, &groups, &repo).await;
         }

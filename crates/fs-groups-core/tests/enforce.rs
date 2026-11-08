@@ -53,7 +53,7 @@ fn a_nested_edge_whose_child_holds_one_becomes_a_listing_without_them() {
         (d, group(d, &["bot"], &[])),
     ]);
     enforce(&mut plan, &strict(&[h]), &verdicts());
-    assert!(plan[&h].nested.is_empty());
+    assert_eq!(plan[&h].nested, [] as [fs_objects::ObjectId; 0]);
     assert_eq!(plan[&h].members, ["ada"]);
     // the child and the grandchild are not administrative and keep their lists and their edge
     assert_eq!(plan[&c].nested, [d]);
@@ -66,7 +66,10 @@ fn an_agent_in_a_group_that_is_not_administrative_stays() {
     let mut plan = BTreeMap::from([(h, group(h, &[], &[])), (c, group(c, &["bot"], &[]))]);
     let done = enforce(&mut plan, &strict(&[h]), &verdicts());
     assert_eq!(plan[&c].members, ["bot"]);
-    assert!(done.left_out.is_empty());
+    assert_eq!(
+        done.left_out,
+        [] as [(fs_objects::ObjectId, std::vec::Vec<std::string::String>); 0]
+    );
 }
 
 #[test]

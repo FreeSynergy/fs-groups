@@ -59,7 +59,10 @@ async fn following_does_not_touch_parents_or_cycles() {
             a.children(top.id).await.unwrap()
         )
     );
-    assert!(a.parents(top.id).await.unwrap().is_empty());
+    assert_eq!(
+        a.parents(top.id).await.unwrap(),
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert_eq!(a.descendants(top.id).await.unwrap(), vec![sub.id]);
     // the loop rule still works as before and is not confused by the follow
     let err = a.request_parent(top.id, sub.id).await.unwrap_err();
@@ -81,8 +84,14 @@ async fn following_gives_nobody_a_membership() {
     .await
     .unwrap();
     Follows::receive(&b, "a.example", &o).await.unwrap();
-    assert!(a.effective(ga.id).await.unwrap().is_empty());
-    assert!(b.effective(gb.id).await.unwrap().is_empty());
+    assert_eq!(
+        a.effective(ga.id).await.unwrap(),
+        [] as [fs_groups_core::EffectiveMember; 0]
+    );
+    assert_eq!(
+        b.effective(gb.id).await.unwrap(),
+        [] as [fs_groups_core::EffectiveMember; 0]
+    );
 }
 
 #[tokio::test]
@@ -124,11 +133,9 @@ async fn deleting_a_group_clears_its_deliveries_and_sources() {
         1
     );
     b.delete(gb.id).await.unwrap();
-    assert!(
-        sb.query(&Query::new().of_type("Source"))
-            .await
-            .unwrap()
-            .is_empty()
+    assert_eq!(
+        sb.query(&Query::new().of_type("Source")).await.unwrap(),
+        [] as [fs_objects::StoredObject; 0]
     );
 }
 
@@ -142,7 +149,7 @@ async fn losing_a_source_revokes_what_was_relayed_from_it() {
     let ga = group_with(&a, "a.example", "A", &[Right::Read, Right::AddMembers]).await;
     let gb = group_with(&b, "b.example", "B", &[Right::Read, Right::AddMembers]).await;
     let gc = c.create("C", "team").await.unwrap();
-    let (d, o) = Follows::deliver(
+    let (deliv, offer) = Follows::deliver(
         &a,
         ga.id,
         &group_iri("b.example", gb.id),
@@ -151,14 +158,14 @@ async fn losing_a_source_revokes_what_was_relayed_from_it() {
     )
     .await
     .unwrap();
-    let s = Follows::receive(&b, "a.example", &o).await.unwrap();
-    Follows::pass_on(&b, s.id, &group_iri("c.example", gc.id), &[Right::Read])
+    let src = Follows::receive(&b, "a.example", &offer).await.unwrap();
+    Follows::pass_on(&b, src.id, &group_iri("c.example", gc.id), &[Right::Read])
         .await
         .unwrap();
-    let s = Follows::withdraw(&b, "a.example", &o.source, d.id)
+    let src = Follows::withdraw(&b, "a.example", &offer.source, deliv.id)
         .await
         .unwrap();
-    assert_eq!(s.state, SourceState::Withdrawn);
+    assert_eq!(src.state, SourceState::Withdrawn);
     let relayed = Follows::deliveries(&b, gb.id).await.unwrap();
     assert_eq!(relayed[0].state, DeliveryState::Revoked);
     // the same when the receiver removes the source itself

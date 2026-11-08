@@ -31,7 +31,10 @@ async fn an_agent_cannot_be_granted_manage() {
         .await
         .unwrap_err();
     assert!(matches!(err, Error::AgentNotAdmin(_)), "{err}");
-    assert!(r.delegations(g.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.delegations(g.id).await.unwrap(),
+        [] as [fs_groups_core::Delegation; 0]
+    );
     // other rights are not admin, and a human may be admin
     r.grant(g.id, Member::Person(BOT.into()), Right::Read)
         .await
@@ -66,7 +69,10 @@ async fn accepting_an_admin_role_is_checked_too_and_the_invitation_stays() {
     let inv = r.invite(g.id, BOT, "owner", None).await.unwrap();
     let err = r.accept(inv.id, BOT, common::at(1)).await.unwrap_err();
     assert!(matches!(err, Error::AgentNotAdmin(_)));
-    assert!(r.direct(g.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.direct(g.id).await.unwrap(),
+        [] as [fs_groups_core::Membership; 0]
+    );
     assert_eq!(
         r.invitations(g.id).await.unwrap()[0].state,
         fs_groups_core::InvitationState::Pending
@@ -237,5 +243,8 @@ async fn a_failing_answer_is_an_error_and_grants_nothing() {
             .await
             .is_err()
     );
-    assert!(r.delegations(g.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.delegations(g.id).await.unwrap(),
+        [] as [fs_groups_core::Delegation; 0]
+    );
 }

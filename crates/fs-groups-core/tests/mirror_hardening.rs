@@ -40,7 +40,7 @@ async fn an_unreadable_group_is_reported_and_never_removed() {
     );
     let report = r.sync_to(&dir).await.unwrap();
     assert_eq!(report.unreadable, [g.id]);
-    assert!(report.removed.is_empty());
+    assert_eq!(report.removed, [] as [fs_objects::ObjectId; 0]);
     assert!(dir.get(g.id).is_some());
     // and once readable again it is still ours
     let mut o = store.get(g.id).await.unwrap().unwrap();
@@ -175,11 +175,17 @@ async fn a_refused_child_is_not_left_nested_in_its_parent() {
     let report = r.sync_to(&dir).await.unwrap();
     assert_eq!(report.failed.len(), 1);
     assert_eq!(report.unnested, [(p.id, c.id)]);
-    assert!(dir.get(p.id).unwrap().nested.is_empty());
+    assert_eq!(
+        dir.get(p.id).unwrap().nested,
+        [] as [fs_objects::ObjectId; 0]
+    );
     // the refusal ends: the next run nests it
     *dir.refuse.lock().unwrap() = None;
     let report = r.sync_to(&dir).await.unwrap();
-    assert!(report.unnested.is_empty());
+    assert_eq!(
+        report.unnested,
+        [] as [(fs_objects::ObjectId, fs_objects::ObjectId); 0]
+    );
     assert_eq!(dir.get(p.id).unwrap().nested, [c.id]);
 }
 
@@ -195,11 +201,17 @@ async fn one_unmapped_person_does_not_stop_the_rest_of_the_group() {
     let report = r.sync_to(&dir).await.unwrap();
     assert_eq!(report.created, [g.id]);
     assert_eq!(report.unmapped, [(g.id, vec![person("bo")])]);
-    assert!(report.failed.is_empty());
+    assert_eq!(
+        report.failed,
+        [] as [(fs_objects::ObjectId, std::string::String); 0]
+    );
     assert_eq!(dir.get(g.id).unwrap().members, [person("ada")]);
     // ada leaves: the removal is applied although bo still cannot be mapped
     let m = r.direct(g.id).await.unwrap().remove(0);
     r.remove(m.id).await.unwrap();
     r.sync_to(&dir).await.unwrap();
-    assert!(dir.get(g.id).unwrap().members.is_empty());
+    assert_eq!(
+        dir.get(g.id).unwrap().members,
+        [] as [std::string::String; 0]
+    );
 }

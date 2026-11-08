@@ -29,7 +29,10 @@ async fn the_actor_must_hold_the_rights_it_passes_on() {
         .await
         .unwrap_err();
     assert!(matches!(err, Error::Forbidden(_)), "{err:?}");
-    assert!(Follows::deliveries(&b, gb.id).await.unwrap().is_empty());
+    assert_eq!(
+        Follows::deliveries(&b, gb.id).await.unwrap(),
+        [] as [fs_groups_core::Delivery; 0]
+    );
 }
 
 #[tokio::test]
@@ -42,7 +45,7 @@ async fn the_origin_stays_the_first_source_along_the_chain() {
     let ga = group_with(&a, "a.example", "A", &[Right::Read]).await;
     let gb = group_with(&b, "b.example", "B", &[Right::Read]).await;
     let gc = c.create("C", "team").await.unwrap();
-    let (d, offer) = Follows::deliver(
+    let (deliv, offer) = Follows::deliver(
         &a,
         ga.id,
         &group_iri("b.example", gb.id),
@@ -52,11 +55,11 @@ async fn the_origin_stays_the_first_source_along_the_chain() {
     .await
     .unwrap();
     assert_eq!(
-        (d.origin.as_str(), offer.origin.as_str()),
+        (deliv.origin.as_str(), offer.origin.as_str()),
         (offer.source.as_str(), offer.source.as_str())
     );
-    let s = Follows::receive(&b, "a.example", &offer).await.unwrap();
-    let (d2, relay) = Follows::pass_on(&b, s.id, &group_iri("c.example", gc.id), &[Right::Read])
+    let src = Follows::receive(&b, "a.example", &offer).await.unwrap();
+    let (d2, relay) = Follows::pass_on(&b, src.id, &group_iri("c.example", gc.id), &[Right::Read])
         .await
         .unwrap();
     let a_iri = group_iri("a.example", ga.id);
@@ -68,7 +71,7 @@ async fn the_origin_stays_the_first_source_along_the_chain() {
     let got = Follows::receive(&c, "b.example", &relay).await.unwrap();
     assert_eq!(got.offer.origin, a_iri);
     // it does not go back to where it came from
-    let back = Follows::pass_on(&b, s.id, &a_iri, &[Right::Read])
+    let back = Follows::pass_on(&b, src.id, &a_iri, &[Right::Read])
         .await
         .unwrap_err();
     assert!(matches!(back, Error::Invalid(_)), "{back:?}");

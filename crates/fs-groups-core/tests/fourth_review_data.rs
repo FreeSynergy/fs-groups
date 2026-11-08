@@ -112,14 +112,14 @@ async fn should_8_a_membership_of_a_changed_type_or_with_a_flipped_member_is_rep
     );
     let dir = FakeDirectory::default();
     r.sync_to(&dir).await.unwrap();
-    let mut o = store.get(a.id).await.unwrap().unwrap();
-    o.envelope.object_type = "Note".into();
-    store.put(o, ME).await.unwrap();
-    let mut o = store.get(b.id).await.unwrap().unwrap();
-    o.index.insert("member_kind".into(), vec!["group".into()]);
-    o.index
+    let mut obj = store.get(a.id).await.unwrap().unwrap();
+    obj.envelope.object_type = "Note".into();
+    store.put(obj, ME).await.unwrap();
+    let mut obj = store.get(b.id).await.unwrap().unwrap();
+    obj.index.insert("member_kind".into(), vec!["group".into()]);
+    obj.index
         .insert("member".into(), vec![ObjectId::new().to_string()]);
-    store.put(o, ME).await.unwrap();
+    store.put(obj, ME).await.unwrap();
     let report = r.sync_to(&dir).await.unwrap();
     let want: BTreeSet<_> = [a.id, b.id].into();
     assert_eq!(

@@ -32,8 +32,8 @@ async fn refused(
 #[tokio::test(flavor = "current_thread")]
 async fn wrong_pointers_are_invalid_requests() {
     with_server(|root| async move {
-        let it = items_of(&root).await;
         const ITEMS: u64 = <items::Client as HasTypeId>::TYPE_ID;
+        let it = items_of(&root).await;
 
         // id, as text
         let mut r = call::<items::create_params::Owned>(&it.client, ITEMS, 3);

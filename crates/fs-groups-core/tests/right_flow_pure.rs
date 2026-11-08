@@ -65,9 +65,12 @@ fn reach_and_sources_of_an_unknown_group_are_empty() {
     let g = Graph::default();
     let s = BTreeMap::new();
     let id = ObjectId::new();
-    assert!(reach(&g, &s, id).is_empty());
+    assert_eq!(reach(&g, &s, id), [] as [fs_objects::ObjectId; 0]);
     assert!(sources(&g, &s, id).is_empty());
-    assert!(fs_groups_core::right_flow::recipients(&s, id).is_empty());
+    assert_eq!(
+        fs_groups_core::right_flow::recipients(&s, id),
+        [] as [fs_objects::ObjectId; 0]
+    );
 }
 
 #[test]

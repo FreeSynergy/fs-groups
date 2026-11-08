@@ -83,36 +83,42 @@ async fn a_parent_that_does_not_pass_up_gets_a_flat_list() {
     link(&r, child.id, parent.id).await;
     let dir = FakeDirectory::default();
     r.sync_to(&dir).await.unwrap();
-    assert!(dir.get(parent.id).unwrap().nested.is_empty());
+    assert_eq!(
+        dir.get(parent.id).unwrap().nested,
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert_eq!(listed(&dir, parent.id), [person("c")].into());
     check_all(&r, &dir, &[&parent, &child]).await;
 }
 
 #[tokio::test]
 async fn chains_nest_where_they_pass_and_flatten_below_a_break() {
-    let r = repo().await;
+    let repo = repo().await;
     // a <- b <- c <- d, with c not passing on: b is nested in a, c and d are listed in b
-    let a = mk(&r, "a", RightFlow::Up).await;
-    let b = mk(&r, "b", RightFlow::Up).await;
-    let c = mk(&r, "c", RightFlow::None).await;
-    let d = mk(&r, "d", RightFlow::Up).await;
+    let a = mk(&repo, "a", RightFlow::Up).await;
+    let b = mk(&repo, "b", RightFlow::Up).await;
+    let c = mk(&repo, "c", RightFlow::None).await;
+    let d = mk(&repo, "d", RightFlow::Up).await;
     for (g, who) in [(&a, "a"), (&b, "b"), (&c, "c"), (&d, "d")] {
-        put(&r, g, who).await;
+        put(&repo, g, who).await;
     }
-    link(&r, b.id, a.id).await;
-    link(&r, c.id, b.id).await;
-    link(&r, d.id, c.id).await;
+    link(&repo, b.id, a.id).await;
+    link(&repo, c.id, b.id).await;
+    link(&repo, d.id, c.id).await;
     let dir = FakeDirectory::default();
-    r.sync_to(&dir).await.unwrap();
+    repo.sync_to(&dir).await.unwrap();
     assert_eq!(dir.get(a.id).unwrap().nested, [b.id]);
-    assert!(dir.get(b.id).unwrap().nested.is_empty());
+    assert_eq!(
+        dir.get(b.id).unwrap().nested,
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert_eq!(
         listed(&dir, b.id),
         [person("b"), person("c"), person("d")].into(),
         "the whole subtree of c, also what is below it"
     );
     assert_eq!(listed(&dir, a.id), [person("a")].into());
-    check_all(&r, &dir, &[&a, &b, &c, &d]).await;
+    check_all(&repo, &dir, &[&a, &b, &c, &d]).await;
 }
 
 #[tokio::test]
@@ -136,7 +142,10 @@ async fn a_diamond_is_nested_on_one_side_and_flat_on_the_other() {
     let dir = FakeDirectory::default();
     r.sync_to(&dir).await.unwrap();
     assert_eq!(dir.get(left.id).unwrap().nested, [bottom.id]);
-    assert!(dir.get(right.id).unwrap().nested.is_empty());
+    assert_eq!(
+        dir.get(right.id).unwrap().nested,
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert!(listed(&dir, right.id).contains(&person("b")), "listed flat");
     assert_eq!(dir.get(top.id).unwrap().nested, [left.id]);
     check_all(&r, &dir, &[&top, &left, &right, &bottom]).await;
@@ -158,7 +167,10 @@ async fn a_change_of_setting_heals_the_directory_both_ways() {
     r.set_right_flow(c.id, RightFlow::None).await.unwrap();
     let report = r.sync_to(&dir).await.unwrap();
     assert_eq!(report.updated, [p.id], "only the parent changes");
-    assert!(dir.get(p.id).unwrap().nested.is_empty());
+    assert_eq!(
+        dir.get(p.id).unwrap().nested,
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert_eq!(listed(&dir, p.id), [person("p"), person("c")].into());
     check_all(&r, &dir, &[&p, &c]).await;
     r.set_right_flow(c.id, RightFlow::Up).await.unwrap();
@@ -194,7 +206,10 @@ async fn the_old_nested_form_is_healed() {
         .unwrap()
         .insert(p.id, old(&p, &[], &[c.id]));
     r.sync_to(&dir).await.unwrap();
-    assert!(dir.get(p.id).unwrap().nested.is_empty());
+    assert_eq!(
+        dir.get(p.id).unwrap().nested,
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert_eq!(listed(&dir, p.id), [person("c")].into());
 }
 

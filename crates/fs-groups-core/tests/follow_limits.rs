@@ -17,7 +17,10 @@ async fn more_rights_than_the_giver_has_are_refused() {
         .await
         .unwrap_err();
     assert!(matches!(err, Error::Forbidden(_)), "{err:?}");
-    assert!(Follows::deliveries(&a, ga.id).await.unwrap().is_empty());
+    assert_eq!(
+        Follows::deliveries(&a, ga.id).await.unwrap(),
+        [] as [fs_groups_core::Delivery; 0]
+    );
 }
 
 #[tokio::test]
@@ -55,7 +58,10 @@ async fn passing_on_without_permission_is_refused() {
         .await
         .unwrap_err();
     assert!(matches!(err, Error::Forbidden(_)), "{err:?}");
-    assert!(Follows::sources(&c, gc.id).await.unwrap().is_empty());
+    assert_eq!(
+        Follows::sources(&c, gc.id).await.unwrap(),
+        [] as [fs_groups_core::Source; 0]
+    );
 }
 
 #[tokio::test]
@@ -78,18 +84,18 @@ async fn passing_on_with_permission_works_within_what_was_given() {
     )
     .await
     .unwrap();
-    let s = Follows::receive(&b, "a.example", &offer).await.unwrap();
-    let err = Follows::pass_on(&b, s.id, &to_c, &[Right::AddMembers])
+    let src = Follows::receive(&b, "a.example", &offer).await.unwrap();
+    let err = Follows::pass_on(&b, src.id, &to_c, &[Right::AddMembers])
         .await
         .unwrap_err();
     assert!(
         matches!(err, Error::Forbidden(_)),
         "more than was given: {err:?}"
     );
-    let (d, relay) = Follows::pass_on(&b, s.id, &to_c, &[Right::Read])
+    let (deliv, relay) = Follows::pass_on(&b, src.id, &to_c, &[Right::Read])
         .await
         .unwrap();
-    assert_eq!(d.via, Some(s.id));
+    assert_eq!(deliv.via, Some(src.id));
     let got = Follows::receive(&c, "b.example", &relay).await.unwrap();
     assert_eq!(got.offer.rights, vec![Right::Read]);
 }
@@ -143,7 +149,10 @@ async fn an_offer_from_another_origin_is_refused() {
         .await
         .unwrap_err();
     assert!(matches!(err, Error::Forbidden(_)), "{err:?}");
-    assert!(Follows::sources(&b, gb.id).await.unwrap().is_empty());
+    assert_eq!(
+        Follows::sources(&b, gb.id).await.unwrap(),
+        [] as [fs_groups_core::Source; 0]
+    );
     // a withdrawal only counts from the one that sent the offer
     Follows::receive(&b, "a.example", &offer).await.unwrap();
     let err = Follows::withdraw(&b, "evil.example", &offer.source, offer.delivery)

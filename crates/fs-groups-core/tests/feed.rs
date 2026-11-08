@@ -67,5 +67,5 @@ async fn every_write_is_told_and_the_drop_ends_it() {
 
     drop(subscription);
     r.create("Unwatched", "").await.unwrap();
-    assert!(seen.take().is_empty());
+    assert_eq!(seen.take(), [] as [fs_groups_core::GroupChange; 0]);
 }

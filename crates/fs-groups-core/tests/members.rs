@@ -87,7 +87,10 @@ async fn removing_ends_the_membership_and_unknown_ids_are_not_found() {
         .await
         .unwrap();
     r.remove(m.id).await.unwrap();
-    assert!(r.direct(g.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.direct(g.id).await.unwrap(),
+        [] as [fs_groups_core::Membership; 0]
+    );
     assert!(matches!(r.remove(m.id).await, Err(Error::NotFound { .. })));
     assert!(matches!(
         r.add(ObjectId::new(), Member::Person(person("x")), "")
@@ -110,5 +113,8 @@ async fn is_member_and_groups_of_trim_the_person_as_add_does() {
     let spaced = format!("  {}\n", person("ada"));
     assert!(r.is_member(g.id, &spaced).await.unwrap());
     assert_eq!(r.groups_of(&spaced).await.unwrap(), [g.id]);
-    assert!(r.groups_of("   ").await.unwrap().is_empty());
+    assert_eq!(
+        r.groups_of("   ").await.unwrap(),
+        [] as [fs_objects::ObjectId; 0]
+    );
 }

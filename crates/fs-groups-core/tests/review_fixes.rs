@@ -51,7 +51,10 @@ async fn a_revoke_that_succeeded_is_never_followed_by_accepted() {
         if rev.is_ok() {
             assert!(acc.is_err());
             assert_eq!(state, InvitationState::Revoked);
-            assert!(rs[0].direct(g.id).await.unwrap().is_empty());
+            assert_eq!(
+                rs[0].direct(g.id).await.unwrap(),
+                [] as [fs_groups_core::Membership; 0]
+            );
         } else {
             assert_eq!(state, InvitationState::Accepted);
         }
@@ -64,24 +67,24 @@ async fn a_revoke_that_succeeded_is_never_followed_by_accepted() {
 async fn concurrent_updates_of_one_group_all_stay() {
     for _ in 0..5 {
         let rs = slow_repos(3).await;
-        let g = rs[0].create("old", "old").await.unwrap();
-        let p = rs[0].create("parent", "t").await.unwrap();
-        let ask = rs[0].request_parent(g.id, p.id).await.unwrap();
+        let grp = rs[0].create("old", "old").await.unwrap();
+        let parent = rs[0].create("parent", "t").await.unwrap();
+        let ask = rs[0].request_parent(grp.id, parent.id).await.unwrap();
         let (a, b, c, d) = tokio::join!(
-            rs[0].rename(g.id, "new"),
-            rs[1].set_kind(g.id, "new-kind"),
-            rs[2].set_right_flow(g.id, RightFlow::Down),
+            rs[0].rename(grp.id, "new"),
+            rs[1].set_kind(grp.id, "new-kind"),
+            rs[2].set_right_flow(grp.id, RightFlow::Down),
             rs[0].approve_parent(ask.id),
         );
         for done in [a.map(|_| ()), b.map(|_| ()), c.map(|_| ()), d.map(|_| ())] {
             done.unwrap();
         }
-        let now = rs[0].get(g.id).await.unwrap().unwrap();
+        let now = rs[0].get(grp.id).await.unwrap().unwrap();
         assert_eq!(
             (now.name.as_str(), now.kind.as_str(), now.right_flow),
             ("new", "new-kind", RightFlow::Down)
         );
-        assert_eq!(now.parents, vec![p.id], "the parent link is not lost");
+        assert_eq!(now.parents, vec![parent.id], "the parent link is not lost");
     }
 }
 
@@ -154,7 +157,10 @@ fn reach_of_an_unknown_group_is_empty() {
     let none = std::collections::BTreeMap::new();
     let graph = fs_groups_core::Graph::default();
     let id = fs_objects::ObjectId::new();
-    assert!(fs_groups_core::right_flow::reach(&graph, &none, id).is_empty());
+    assert_eq!(
+        fs_groups_core::right_flow::reach(&graph, &none, id),
+        [] as [fs_objects::ObjectId; 0]
+    );
 }
 
 // ---- should fix: two instances over one store ----

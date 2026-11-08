@@ -213,7 +213,10 @@ async fn a_marking_that_appears_later_removes_the_person_at_the_next_sync() {
     assert_eq!(dir.get(g.id).unwrap().members, [person("ada")]);
     agents.0.lock().unwrap().push(person("ada"));
     let report = r.sync_to(&dir).await.unwrap();
-    assert!(dir.get(g.id).unwrap().members.is_empty());
+    assert_eq!(
+        dir.get(g.id).unwrap().members,
+        [] as [std::string::String; 0]
+    );
     assert_eq!(report.left_out, [(g.id, vec![person("ada")])]);
 }
 
@@ -260,5 +263,8 @@ async fn nobody_is_asked_while_no_group_is_administrative() {
     let dir = FakeDirectory::default();
     let report = unwired.sync_to(&dir).await.unwrap();
     assert_eq!(dir.get(g.id).unwrap().members, [person("ada")]);
-    assert!(report.left_out.is_empty());
+    assert_eq!(
+        report.left_out,
+        [] as [(fs_objects::ObjectId, std::vec::Vec<std::string::String>); 0]
+    );
 }

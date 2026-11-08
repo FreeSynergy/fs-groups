@@ -85,7 +85,10 @@ async fn changes_here_reach_the_directory_and_removals_follow() {
     assert_eq!(report.removed, [dept.id]);
     assert_eq!(dir.get(team.id).unwrap().name, "crew");
     assert!(dir.get(dept.id).is_none());
-    assert!(dir.get(team.id).unwrap().nested.is_empty());
+    assert_eq!(
+        dir.get(team.id).unwrap().nested,
+        [] as [fs_objects::ObjectId; 0]
+    );
 }
 
 #[tokio::test]
@@ -131,7 +134,7 @@ async fn only_what_we_mirrored_is_ever_removed() {
     dir.apply(&foreign).await.unwrap();
     r.sync_to(&dir).await.unwrap();
     let again = r.sync_to(&dir).await.unwrap();
-    assert!(again.removed.is_empty());
+    assert_eq!(again.removed, [] as [fs_objects::ObjectId; 0]);
     assert!(
         dir.get(foreign.id).is_some(),
         "a group we never mirrored stays"

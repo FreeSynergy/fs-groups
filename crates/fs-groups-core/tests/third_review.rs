@@ -80,7 +80,10 @@ async fn an_unrelated_unreadable_group_does_not_let_an_agent_into_an_administrat
     put(&r, &c, BOT).await;
     let report = r.sync_to(&dir).await.unwrap();
     assert!(!closure(&dir, h.id).contains(BOT), "{:?}", dir.get(h.id));
-    assert!(dir.get(h.id).unwrap().nested.is_empty());
+    assert_eq!(
+        dir.get(h.id).unwrap().nested,
+        [] as [fs_objects::ObjectId; 0]
+    );
     assert!(!report.is_quiet());
 }
 
@@ -225,16 +228,16 @@ async fn a_flat_child_with_a_corrupt_membership_still_keeps_the_agent_out_of_the
         mk(&r, "c", RightFlow::None).await,
     );
     put(&r, &h, "ada").await;
-    let m = r.add(c.id, Member::Person(BOT.into()), "").await.unwrap();
+    let member = r.add(c.id, Member::Person(BOT.into()), "").await.unwrap();
     link(&r, c.id, h.id).await;
     admin(&r, &h).await;
     let dir = FakeDirectory::default();
     r.sync_to(&dir).await.unwrap();
     assert!(dir.get(h.id).unwrap().members.contains(&BOT.to_string()));
     agents.0.lock().unwrap().push(BOT.to_string());
-    let mut o = store.get(m.id).await.unwrap().unwrap();
-    o.index.remove("member_kind");
-    store.put(o, ME).await.unwrap();
+    let mut obj = store.get(member.id).await.unwrap().unwrap();
+    obj.index.remove("member_kind");
+    store.put(obj, ME).await.unwrap();
     let report = r.sync_to(&dir).await.unwrap();
     assert_eq!(dir.get(h.id).unwrap().members, [person("ada")]);
     // the group with the corrupt membership counts as administrative too (fail closed)

@@ -32,7 +32,10 @@ async fn a_variant_of_an_admin_role_is_still_admin() {
         // and through an invitation
         let inv = r.invite(g.id, BOT, "Owner", None).await.unwrap();
         assert!(r.accept(inv.id, BOT, at(1)).await.is_err());
-        assert!(r.direct(g.id).await.unwrap().is_empty());
+        assert_eq!(
+            r.direct(g.id).await.unwrap(),
+            [] as [fs_groups_core::Membership; 0]
+        );
     }
 }
 
@@ -68,7 +71,10 @@ async fn invisible_and_control_characters_are_refused_at_the_input() {
         );
         assert!(r.may_do(g.id, bad, Right::Read).await.is_err(), "{bad:?}");
     }
-    assert!(r.direct(g.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.direct(g.id).await.unwrap(),
+        [] as [fs_groups_core::Membership; 0]
+    );
 }
 
 // ---- the person is normalised before the host is asked ----
@@ -165,9 +171,9 @@ async fn an_unreadable_group_in_the_middle_takes_nobody_out_of_the_directory() {
         .unwrap();
     let dir = FakeDirectory::default();
     r.sync_to(&dir).await.unwrap();
-    let mut o = store.get(u.id).await.unwrap().unwrap();
-    o.content.as_object_mut().unwrap().remove("name");
-    store.put(o, ME).await.unwrap();
+    let mut obj = store.get(u.id).await.unwrap().unwrap();
+    obj.content.as_object_mut().unwrap().remove("name");
+    store.put(obj, ME).await.unwrap();
     for _ in 0..2 {
         let report = r.sync_to(&dir).await.unwrap();
         assert_eq!(report.unreadable, [u.id]);

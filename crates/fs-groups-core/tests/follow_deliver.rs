@@ -76,7 +76,10 @@ async fn the_receiver_can_remove_the_source() {
     .unwrap();
     let s = Follows::receive(&b, "a.example", &offer).await.unwrap();
     Follows::remove_source(&b, s.id).await.unwrap();
-    assert!(Follows::sources(&b, gb.id).await.unwrap().is_empty());
+    assert_eq!(
+        Follows::sources(&b, gb.id).await.unwrap(),
+        [] as [fs_groups_core::Source; 0]
+    );
     // the giver is not asked and keeps its delivery
     let kept = Follows::deliveries(&a, ga.id).await.unwrap();
     assert_eq!(kept[0].id, d.id);

@@ -43,7 +43,10 @@ async fn an_answered_invitation_cannot_be_answered_again() {
             ..
         }
     ));
-    assert!(r.direct(g.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.direct(g.id).await.unwrap(),
+        [] as [fs_groups_core::Membership; 0]
+    );
 }
 
 #[tokio::test]
@@ -76,7 +79,10 @@ async fn an_expired_invitation_cannot_be_accepted_and_is_stored_as_expired() {
         .await
         .unwrap_err();
     assert!(matches!(err, Error::Expired(id) if id == inv.id));
-    assert!(r.direct(g.id).await.unwrap().is_empty());
+    assert_eq!(
+        r.direct(g.id).await.unwrap(),
+        [] as [fs_groups_core::Membership; 0]
+    );
     assert_eq!(
         Invitations::list(&r, g.id).await.unwrap()[0].state,
         InvitationState::Expired

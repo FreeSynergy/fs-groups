@@ -102,7 +102,10 @@ fn a_group_without_a_name_is_refused_before_it_reaches_the_server() {
     let adapter = GroupsAdapter::new(Arc::new(GroupsRemote::connect(&socket).unwrap()));
     let blank = adapter.blank().unwrap();
     assert!(adapter.create(&blank).is_err());
-    assert!(adapter.rows("", 0, 10).unwrap().is_empty());
+    assert_eq!(
+        adapter.rows("", 0, 10).unwrap(),
+        [] as [fs_components_workbenches::people::PersonRow; 0]
+    );
 }
 
 #[test]

@@ -79,6 +79,9 @@ async fn an_edge_that_is_only_requested_is_not_mirrored() {
     r.request_parent(c.id, p.id).await.unwrap();
     let dir = FakeDirectory::default();
     let report = r.sync_to(&dir).await.unwrap();
-    assert!(report.divergences.is_empty());
-    assert!(dir.get(p.id).unwrap().nested.is_empty());
+    assert_eq!(report.divergences, [] as [fs_groups_core::Divergence; 0]);
+    assert_eq!(
+        dir.get(p.id).unwrap().nested,
+        [] as [fs_objects::ObjectId; 0]
+    );
 }
