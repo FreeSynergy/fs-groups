@@ -102,12 +102,12 @@ async fn the_receiver_enters_lists_and_removes_a_source() {
             write_uuid(offer.reborrow().init_delivery(), Some(delivery));
             offer
                 .reborrow()
-                .set_source(&group_iri("other.example", unknown()));
+                .set_source(group_iri("other.example", unknown()));
             offer
                 .reborrow()
-                .set_recipient(&group_iri("local.invalid", mine));
+                .set_recipient(group_iri("local.invalid", mine));
             offer.reborrow().init_rights(1).set(0, Right::Read);
-            offer.set_origin(&group_iri("other.example", unknown()));
+            offer.set_origin(group_iri("other.example", unknown()));
         }
         let answer = receive.send().promise.await.unwrap();
         let source = answer.get().unwrap().get_source().unwrap();
@@ -122,12 +122,12 @@ async fn the_receiver_enters_lists_and_removes_a_source() {
             write_uuid(offer.reborrow().init_delivery(), Some(unknown()));
             offer
                 .reborrow()
-                .set_source(&group_iri("other.example", unknown()));
+                .set_source(group_iri("other.example", unknown()));
             offer
                 .reborrow()
-                .set_recipient(&group_iri("local.invalid", mine));
+                .set_recipient(group_iri("local.invalid", mine));
             offer.reborrow().init_rights(1).set(0, Right::Read);
-            offer.set_origin(&group_iri("other.example", unknown()));
+            offer.set_origin(group_iri("other.example", unknown()));
         }
         let err = forged.send().promise.await.err().unwrap();
         assert_eq!(problem(&err), (403, gp("forbidden")));
