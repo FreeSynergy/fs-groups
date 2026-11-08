@@ -89,6 +89,8 @@ impl Delegations for Faulty {
     }
 }
 
+impl fs_groups_core::Follows for Faulty {}
+
 impl GroupFeed for Faulty {
     fn subscribe(&self, listener: Arc<dyn GroupListener>) -> Subscription {
         GroupFeed::subscribe(&self.0, listener)

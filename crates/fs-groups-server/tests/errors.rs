@@ -102,6 +102,9 @@ async fn add_parent_says_it_is_superseded_and_the_report_says_the_same() {
             "invite.read",
             "right.grant",
             "right.read",
+            "follow.deliver",
+            "follow.read",
+            "follow.receive",
         ];
         let mut want: Vec<_> = offered
             .iter()
@@ -156,6 +159,8 @@ impl Delegations for ReadsOnly {
         Delegations::list(&self.0, group).await
     }
 }
+impl fs_groups_core::Follows for ReadsOnly {}
+
 impl GroupFeed for ReadsOnly {
     fn subscribe(&self, listener: Arc<dyn GroupListener>) -> Subscription {
         GroupFeed::subscribe(&self.0, listener)

@@ -6,7 +6,7 @@ directory (ADR 0024); a directory is only a mirror (ADR 0047). Contract: `groups
 
 ## State
 
-Version 0.4.0. **Several rules below are provisional: the owner is still answering what up and down mean and who consents to a nesting link.** A tag is fine as long as these points stay marked provisional.
+Version 0.4.0. The server also serves `Follows` (`follow.deliver`, `follow.read`, `follow.receive` are listed in `capabilities()`). **`sender` of `receive`/`withdraw` is named by the client; nothing authenticates it** (same limit as the rest of the transport). The server wires `OperatorIsHuman`: the `--actor` is a person, everybody else has no answer; `fs-groups-people` replaces this once a people provider is reachable. **Several rules below are provisional: the owner is still answering what up and down mean and who consents to a nesting link.** A tag is fine as long as these points stay marked provisional.
 
 | Area | State |
 |---|---|

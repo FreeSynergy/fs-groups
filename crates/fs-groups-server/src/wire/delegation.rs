@@ -9,7 +9,7 @@ use fs_interfaces::rpc::{invalid_request, write_object_id};
 use super::basic::{ENTRY_BYTES, list_len};
 use super::member::write_member;
 
-fn right_to_wire(right: Right) -> groups_capnp::Right {
+pub(super) fn right_to_wire(right: Right) -> groups_capnp::Right {
     match right {
         Right::Read => groups_capnp::Right::Read,
         Right::AddMembers => groups_capnp::Right::AddMembers,

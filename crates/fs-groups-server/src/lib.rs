@@ -14,6 +14,7 @@
 mod delegations_service;
 mod errors;
 mod feed;
+mod follows_service;
 mod groups_service;
 mod invitations_service;
 mod items_service;

@@ -9,11 +9,12 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use capnp_rpc::new_client;
-use fs_groups_core::{Delegations, GroupFeed, Groups, Invitations, Memberships};
+use fs_groups_core::{Delegations, Follows, GroupFeed, Groups, Invitations, Memberships};
 use fs_interfaces::groups_capnp::groups;
 
 use crate::delegations_service::DelegationsImpl;
 use crate::feed::subscribe;
+use crate::follows_service::FollowsImpl;
 use crate::invitations_service::InvitationsImpl;
 use crate::items_service::ItemsImpl;
 use crate::memberships_service::MembershipsImpl;
@@ -29,6 +30,7 @@ pub struct GroupsServer {
     memberships: Arc<dyn Memberships>,
     invitations: Arc<dyn Invitations>,
     delegations: Arc<dyn Delegations>,
+    follows: Arc<dyn Follows>,
     feed: Arc<dyn GroupFeed>,
 }
 
@@ -36,13 +38,14 @@ impl GroupsServer {
     /// Serve this provider.
     pub fn new<P>(provider: Arc<P>) -> Self
     where
-        P: Groups + Memberships + Invitations + Delegations + GroupFeed + 'static,
+        P: Groups + Memberships + Invitations + Delegations + Follows + GroupFeed + 'static,
     {
         Self {
             groups: provider.clone(),
             memberships: provider.clone(),
             invitations: provider.clone(),
             delegations: provider.clone(),
+            follows: provider.clone(),
             feed: provider,
         }
     }
@@ -113,6 +116,18 @@ impl groups::Server for GroupsServer {
             delegations: self.delegations.clone(),
         };
         results.get().set_delegations(new_client(delegations));
+        Ok(())
+    }
+
+    async fn follows(
+        self: Rc<Self>,
+        _: groups::FollowsParams,
+        mut results: groups::FollowsResults,
+    ) -> Done {
+        let follows = FollowsImpl {
+            follows: self.follows.clone(),
+        };
+        results.get().set_follows(new_client(follows));
         Ok(())
     }
 
