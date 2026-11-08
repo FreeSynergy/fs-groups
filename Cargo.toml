@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/fs-groups-core", "crates/fs-groups-people", "crates/fs-groups-server", "crates/fs-groups-app", "crates/fs-groups"]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.0.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.85"
