@@ -14,7 +14,8 @@ const OWNER: &str = "https://example.org/users/owner";
 const OTHER: &str = "https://example.org/users/other";
 
 fn start(socket: &Path, data: &Path, actor: &str) -> Child {
-    Command::new(env!("CARGO_BIN_EXE_fs-groups-server"))
+    Command::new(env!("CARGO_BIN_EXE_fs-groups"))
+        .arg("serve")
         .arg("--socket")
         .arg(socket)
         .arg("--data")
@@ -158,7 +159,8 @@ async fn groups_survive_a_restart_and_a_second_start_is_refused() {
 #[test]
 fn exit_codes_say_what_went_wrong() {
     let run = |args: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_fs-groups-server"))
+        Command::new(env!("CARGO_BIN_EXE_fs-groups"))
+            .arg("serve")
             .args(args)
             .stdout(Stdio::null())
             .stderr(Stdio::null())

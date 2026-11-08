@@ -22,7 +22,9 @@ mod list_all;
 mod memberships_service;
 mod nesting_service;
 mod operator;
+mod program;
 mod wire;
 
 pub use groups_service::GroupsServer;
 pub use operator::OperatorIsHuman;
+pub use program::{HELP, ServeError, serve};

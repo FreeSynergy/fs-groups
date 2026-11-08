@@ -258,3 +258,9 @@ Ids are typed: a source id is `NotFound` for `revoke_delivery` and a delivery id
 
 Core: `fs-objects` (git tag v0.5.0), `fs-interfaces` (git tag v0.46.0), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full). Server: also `fs-interfaces` feature `rpc`, `capnp`, `capnp-rpc`; dev: `tempfile`, `uuid`.
 All MIT / Apache-2.0. No Kanidm dependency of any kind.
+
+## One binary `fs-groups` and its window (ADR 0063, 2026-11-08)
+
+`crates/fs-groups` is the only binary: `fs-groups` without arguments opens the window, `fs-groups serve` runs the server (`fs_groups_server::serve`), feature `gui` (default) builds the window. `fs-groups-server` and `fs-groups-app` are libraries. The window (`crates/fs-groups-app`) is a frontend over `groups.capnp`: `GroupsApi` (trait first) with `GroupsRemote` (a worker thread owns the Cap'n Proto connection) and `GroupsAdapter`, which gives the groups to the list-and-page workbench of `fs-components` (built for people, neutral in what it shows) as rows (name, kind), a sheet (kind, what the group is part of, its direct members) and a form (name, kind). If no server answers on the user's own socket the window starts `fs-groups serve` detached. Tests: `tests/remote.rs` (real server, real store), `crates/fs-groups/tests/binary.rs` (the real binary).
+
+Not in the window yet (nothing pretends otherwise): nesting (requests, approval), adding and removing members, invitations, delegations, rights, follows, mirrors; no revision on the wire, so a change by someone else is not detected on save; no timeout waiting for the server.
