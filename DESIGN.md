@@ -25,6 +25,7 @@ Version 0.4.0. **Several rules below are provisional: the owner is still answeri
 | Agents never admin: `AiMarking` (injected), admin roles by configuration (folded, ASCII), installer by configuration, identities in NFC and checked by shape; no answer = refuse; in the mirror one invariant on the final plan (`enforce`), checked on every prefix of the writes | done, **provisional, no authentication** |
 | Mirror hardening: ledger written before the directory (intent), tidied only when it changed; keyed by `directory_id`; everything is read once and sorted by type, index and content must agree, anything unreadable fails closed and is reported (not quiet); revocations elsewhere go on; loops are never nested; a parent is applied only with the children the directory holds; one unmapped person does not block the group | done |
 | One write path (`Writer` holds the lock), process-wide lock per store handle | done; **single-writer limit, see Decisions** |
+| Following: `Follows` (deliver, pass_on, revoke_delivery, deliveries, receive, withdraw, sources, remove_source); contract `Follows` in `groups.capnp` (fs-interfaces v0.38.0, provisional) | done in the core, **provisional**; relayed copies keep `origin`; the `follow.*` capability ids are not listed by `capabilities()` (the server does not serve `Follows`). **Not built:** the capnp server half, a transport that sends the offer, an authenticated sender and acting person |
 | `group.subscribe`: `GroupFeed` (Observer) tells every committed write of a group, membership, invitation, delegation or parent request, with the envelope the store committed; `Deleted` carries the id only | done, draft; **what the feed covers is provisional** |
 | `Group.envelope`: the group as stored, as the contract's `Group` has it | done |
 | Server `fs-groups-server` (writes of several steps finish even if the client goes away): every method of `Items`, `Memberships`, `Invitations`, `Delegations`, `subscribe`, `supportReport`; `addParent` answers `Unsupported`; typed problems `groups/{not-found 404, cycle 409, conflict 409, invalid-transition 409, not-invitee 403, forbidden 403, expired 410, directory 502, unmapped 502}`, shared `invalid-request` 422 and `too-large` 413; binary with the shared `ServerOptions` | done, draft; **no authenticated caller, see the note below** |
@@ -59,6 +60,7 @@ Version 0.4.0. **Several rules below are provisional: the owner is still answeri
 | `repo/notify.rs` | Decorator | wraps the store's `ObjectRepository`, so no write path can forget to tell the feed |
 | `fs-groups-server/{groups,items,nesting,memberships,invitations,delegations}_service.rs` | Adapter + Factory | wire in, one trait call, wire out; depends on the traits only |
 | `fs-groups-server/{wire/*,errors,feed}.rs` | Adapter, Observer | values on the wire with their limits, core errors as RFC 9457 problems, `GroupFeed` to the shared forwarder |
+| `follow_rules.rs`, `repo/deliveries.rs`, `repo/sources.rs`, `repo/follow_codec.rs` | Specification (pure) + State + Repository | following between independent groups; not a tree, parents and cycles untouched. Repository turned round: the giver delivers, the receiver lists sources; State for delivery and source; Specification for "never more than the giver has", "pass on only with permission", "the sender is the origin" |
 | `mirror/plan.rs` | Specification (pure) | create / update / keep / remove decided without I/O |
 | `repo/mirror.rs` | Repository | wanted state + the ledger of mirrored ids |
 
@@ -215,7 +217,31 @@ Version 0.4.0. **Several rules below are provisional: the owner is still answeri
 * **Lists:** `Items.list`, `Memberships.direct` and `effective` page by weight (the two were appended to the contract for this: the ids for `remove` only come from `direct`). The others (`invitations.list`, `delegations.list`, `parentRequests`, `groupsOf` and the id lists) still have no cursor and answer 413 rather than end the connection if they would not fit, about 8000 entries of the longest identifier. `invitations.list` and `delegations.list` can lock out `revoke` that way: the ids come from `invite` and `grant` too, but only to that caller.
 * **`Items.list`** walks the provider's pages and cuts the wire page by weight, so each page reads the whole list; cursors are places in that list (`fs-interfaces/DESIGN.md`).
 * **`--instance`** comes from the shared `ServerOptions` (since `fs-interfaces` v0.24.0); without it IRIs say `local.invalid`.
+* **`Follows` (`Groups.follows @6`) is not served.** The core offers it (`GroupRepo`), the server hands out no `Follows`; the `follow.*` capability ids are therefore not in `supportReport` either (the report would claim what the server does not serve; `errors.rs` pins the list). Whoever builds the server half maps the trait and adds the ids.
 * **Right flow:** the server maps the enum and nothing else; the meaning stays in `right_flow.rs` and may change there.
+
+## Following (ADR 0056 "Einseitig folgen", owner 2026-11-07; the form is a proposal)
+
+Independent groups, no tree. **Who allows access, delivers.** The receiver gets an offer (proposal: AS2 `Invite`), its server
+enters the source without any confirmation, and the receiver can remove it again. Mutual following is allowed. Only the giver's
+own rights go, never more than the giver holds (checked with `may_do`). A receiver may pass a delivery on to a third group only
+if the source marked it so (flag on the delivery); the giver can revoke at any time. "Belongs to" with parents stays as it is
+and following never touches it.
+Order of work on branch `follow`: (1) pattern, (2) contract and trait, answering `Unsupported`, (3) tests against the trait,
+(4) implementation. Assumptions (all provisional): `Manage` is never delivered to a foreign group; a relayed delivery is not
+passable again; revoking or removing a source revokes the deliveries relayed from it; the host authenticates the sender.
+Stored as `Delivery` (giver side, index `group` = giving group) and `Source` (receiver side, index `group` = receiving group), so
+`delete` clears both without extra code. `receive` checks only that the offer's source lies at the origin the transport named
+(`follow_rules::from_origin`): **nothing authenticates that origin**, so a host that passes any name defeats it. Without that, anybody
+could enter themselves as a source of somebody else (the harm is a false entry, not a right: a right only ever lies on the giver's
+own server). Entering without confirmation also means anybody can fill a group's source list; the receiver removes entries. Revoking
+needs a message `withdraw` to the receiver; if it never arrives the entry stays `Active` there (the giver's own record is what counts).
+`deliver` asks `may_do` of the acting person on the giving group; `pass_on` asks it on the passing group for every right passed on, so a
+relay cannot give what its actor does not hold (the conservative reading, **provisional**). `revoke_delivery` and `remove_source` do not
+ask who acts (same gap as nesting). **Origin (provisional):** `Offer.origin` / `Delivery.origin` name the group whose right it is; a
+relayed copy keeps the first source while `source` says who sent it, and a copy is not passed back to its origin. Nothing proves that an
+`origin` that differs from `source` is true: the receiver trusts its sender for it, as for everything else the sender says.
+Ids are typed: a source id is `NotFound` for `revoke_delivery` and a delivery id for `remove_source`. Ending twice writes and tells nothing.
 
 ## Open points
 

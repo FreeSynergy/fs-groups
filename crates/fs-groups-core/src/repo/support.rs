@@ -1,7 +1,7 @@
 //! What this provider reports it can do.
 //!
 //! Pattern: Null Object (report) — one place that lists every capability id of the schema (ADR 0045).
-//! All are offered today; one that is not would be recorded here with its reason.
+//! All are offered today (the `follow.*` ids are left out until a server exposes `Follows`); one that is not would be recorded here with its reason.
 
 use fs_interfaces::Capabilities;
 

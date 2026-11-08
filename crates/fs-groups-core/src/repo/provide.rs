@@ -12,11 +12,11 @@ use fs_objects::{ObjectId, Timestamp};
 use super::handle::GroupRepo;
 use crate::error::Result;
 use crate::model::{
-    Cursor, Delegation, EffectiveMember, Group, Invitation, Member, Membership, Page,
-    ParentRequest, Right, RightFlow,
+    Cursor, Delegation, Delivery, EffectiveMember, Group, Invitation, Member, Membership, Offer,
+    Page, ParentRequest, Right, RightFlow, Source,
 };
 use crate::traits::{
-    Delegations, GroupFeed, GroupListener, Groups, Invitations, Memberships, Subscription,
+    Delegations, Follows, GroupFeed, GroupListener, Groups, Invitations, Memberships, Subscription,
 };
 
 #[async_trait]
@@ -152,5 +152,44 @@ impl Delegations for GroupRepo {
 impl GroupFeed for GroupRepo {
     fn subscribe(&self, listener: Arc<dyn GroupListener>) -> Subscription {
         self.feed.add(listener)
+    }
+}
+
+#[async_trait]
+impl Follows for GroupRepo {
+    async fn deliver(
+        &self,
+        group: ObjectId,
+        recipient: &str,
+        rights: &[Right],
+        pass_on: bool,
+    ) -> Result<(Delivery, Offer)> {
+        GroupRepo::deliver(self, group, recipient, rights, pass_on).await
+    }
+    async fn pass_on(
+        &self,
+        source: ObjectId,
+        recipient: &str,
+        rights: &[Right],
+    ) -> Result<(Delivery, Offer)> {
+        GroupRepo::pass_on(self, source, recipient, rights).await
+    }
+    async fn revoke_delivery(&self, delivery: ObjectId) -> Result<()> {
+        GroupRepo::revoke_delivery(self, delivery).await
+    }
+    async fn deliveries(&self, group: ObjectId) -> Result<Vec<Delivery>> {
+        GroupRepo::deliveries(self, group).await
+    }
+    async fn receive(&self, sender: &str, offer: &Offer) -> Result<Source> {
+        GroupRepo::receive(self, sender, offer).await
+    }
+    async fn withdraw(&self, sender: &str, source: &str, delivery: ObjectId) -> Result<Source> {
+        GroupRepo::withdraw(self, sender, source, delivery).await
+    }
+    async fn sources(&self, group: ObjectId) -> Result<Vec<Source>> {
+        GroupRepo::sources(self, group).await
+    }
+    async fn remove_source(&self, id: ObjectId) -> Result<()> {
+        GroupRepo::remove_source(self, id).await
     }
 }

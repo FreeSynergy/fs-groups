@@ -9,11 +9,11 @@ use crate::model::{
     Delegation, Invitation, InvitationState, Member, Membership, ParentRequest, RequestState, Right,
 };
 
-fn one<'a>(o: &'a StoredObject, key: &str) -> Option<&'a str> {
+pub(super) fn one<'a>(o: &'a StoredObject, key: &str) -> Option<&'a str> {
     o.index.get(key)?.first().map(String::as_str)
 }
 
-fn id_of(o: &StoredObject, key: &str) -> Option<ObjectId> {
+pub(super) fn id_of(o: &StoredObject, key: &str) -> Option<ObjectId> {
     one(o, key)?.parse().ok()
 }
 

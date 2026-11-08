@@ -165,3 +165,51 @@ impl GroupDirectory for FakeDirectory {
 mod backends;
 #[allow(unused_imports)]
 pub use backends::*;
+/// A site: its own store, instance name and acting person (`https://<instance>/users/admin`).
+pub async fn site(instance: &str) -> (GroupRepo, Arc<dyn Store>) {
+    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let actor = format!("https://{instance}/users/admin");
+    (
+        GroupRepo::new(store.clone(), actor)
+            .with_instance(instance)
+            .with_ai_marking(Arc::new(AllHumans)),
+        store,
+    )
+}
+
+/// The acting person of a [`site`].
+pub fn admin(instance: &str) -> String {
+    format!("https://{instance}/users/admin")
+}
+
+/// The IRI of group `id` on `instance`.
+pub fn group_iri(instance: &str, id: ObjectId) -> String {
+    format!("https://{instance}/groups/{id}")
+}
+
+/// A group on a [`site`] where the acting person holds exactly `rights`.
+pub async fn group_with(
+    r: &GroupRepo,
+    instance: &str,
+    name: &str,
+    rights: &[fs_groups_core::Right],
+) -> fs_groups_core::Group {
+    use fs_groups_core::Member;
+    let g = r.create(name, "team").await.unwrap();
+    for right in rights {
+        r.grant(g.id, Member::Person(admin(instance)), *right)
+            .await
+            .unwrap();
+    }
+    g
+}
+
+/// Everybody in the site tests is a person.
+struct AllHumans;
+
+#[async_trait]
+impl AiMarking for AllHumans {
+    async fn is_ai(&self, _person: &str) -> Result<Option<bool>> {
+        Ok(Some(false))
+    }
+}

@@ -12,6 +12,10 @@ pub const INVITATION_TYPE: &str = "Invite";
 pub const DELEGATION_TYPE: &str = "Delegation";
 /// Type of a request to nest a group under a parent in the store (provisional).
 pub const PARENT_REQUEST_TYPE: &str = "ParentRequest";
+/// Type of a delivery (rights a group lets another group have) in the store (provisional).
+pub const DELIVERY_TYPE: &str = "Delivery";
+/// Type of a source (what a group was offered and entered) in the store (provisional).
+pub const SOURCE_TYPE: &str = "Source";
 /// `context` of all objects of this program.
 pub const CONTEXT: &str = "groups";
 pub(super) const LEDGER_TYPE: &str = "MirrorLedger";
