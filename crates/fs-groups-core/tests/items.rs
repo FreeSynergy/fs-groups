@@ -40,7 +40,7 @@ async fn a_blank_name_is_refused_and_unknown_ids_are_not_found() {
     let r = repo().await;
     assert!(matches!(
         r.create("  ", "team").await,
-        Err(Error::Conflict(_))
+        Err(Error::Invalid(_))
     ));
     assert!(r.get(ObjectId::new()).await.unwrap().is_none());
     assert!(matches!(

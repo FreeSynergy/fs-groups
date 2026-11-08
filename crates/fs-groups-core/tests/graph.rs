@@ -1,10 +1,11 @@
 //! The pure graph: walks, paths and the order for a directory.
 
 use fs_groups_core::{Graph, Group};
-use fs_objects::ObjectId;
+use fs_objects::{Envelope, ObjectId};
 
 fn group(parents: &[ObjectId]) -> Group {
-    let id = ObjectId::new();
+    let envelope = Envelope::new("Group", "x");
+    let id = envelope.id;
     Group {
         id,
         iri: String::new(),
@@ -12,6 +13,7 @@ fn group(parents: &[ObjectId]) -> Group {
         kind: String::new(),
         parents: parents.to_vec(),
         right_flow: Default::default(),
+        envelope,
     }
 }
 

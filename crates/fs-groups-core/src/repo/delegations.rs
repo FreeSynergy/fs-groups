@@ -26,7 +26,7 @@ impl GroupRepo {
     pub async fn grant(&self, group: ObjectId, holder: Member, right: Right) -> Result<Delegation> {
         let holder = match holder {
             Member::Person(p) if p.trim().is_empty() => {
-                return Err(Error::Conflict("a holder needs an IRI".into()));
+                return Err(Error::Invalid("a holder needs an IRI".into()));
             }
             Member::Person(p) => Member::Person(text::person("holder", &p)?),
             group_holder @ Member::Group(_) => group_holder,

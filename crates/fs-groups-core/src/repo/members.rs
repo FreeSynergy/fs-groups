@@ -20,12 +20,12 @@ impl GroupRepo {
     /// one membership: the second call returns the first. The person is stored trimmed.
     pub async fn add(&self, group: ObjectId, member: Member, role: &str) -> Result<Membership> {
         let Member::Person(person) = &member else {
-            return Err(Error::Conflict(
+            return Err(Error::Invalid(
                 "a group joins a group with request_parent, not as a member".into(),
             ));
         };
         if person.trim().is_empty() {
-            return Err(Error::Conflict("a member needs an IRI".into()));
+            return Err(Error::Invalid("a member needs an IRI".into()));
         }
         text::check_role("role", role.trim())?;
         let member = Member::Person(text::person("person", person)?);

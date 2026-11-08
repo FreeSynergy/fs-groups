@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/fs-groups-core", "crates/fs-groups-people"]
+members = ["crates/fs-groups-core", "crates/fs-groups-people", "crates/fs-groups-server"]
 
 [workspace.package]
 version = "0.3.0"

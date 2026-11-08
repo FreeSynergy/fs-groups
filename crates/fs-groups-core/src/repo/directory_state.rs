@@ -101,7 +101,7 @@ impl GroupRepo {
         let (mut memberships, mut delegations, mut strays) = (vec![], vec![], vec![]);
         for o in found {
             match o.envelope.object_type.as_str() {
-                GROUP_TYPE => match Group::from_content(o.envelope.id, &o.content) {
+                GROUP_TYPE => match Group::from_content(o.envelope.clone(), &o.content) {
                     Some(g) => groups.push(g),
                     None => bad_groups.push((o.envelope.id, Group::parents_in(&o.content))),
                 },

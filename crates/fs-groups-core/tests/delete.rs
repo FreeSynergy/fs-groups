@@ -60,3 +60,18 @@ async fn deleting_an_unknown_group_is_not_found() {
     let r = repo().await;
     assert!(r.delete(fs_objects::ObjectId::new()).await.is_err());
 }
+
+#[tokio::test]
+async fn a_group_holding_a_right_on_itself_can_be_deleted() {
+    let r = repo().await;
+    let g = r.create("Self", "").await.unwrap();
+    r.add(g.id, Member::Person(person("ada")), "")
+        .await
+        .unwrap();
+    r.grant(g.id, Member::Group(g.id), Right::Manage)
+        .await
+        .unwrap();
+    r.delete(g.id).await.unwrap();
+    assert!(r.get(g.id).await.unwrap().is_none());
+    assert!(r.groups_of(&person("ada")).await.unwrap().is_empty());
+}

@@ -1,4 +1,4 @@
-//! `fs-groups-core`: program core of FreeSynergy groups (no GUI, no capnp server yet).
+//! `fs-groups-core`: program core of FreeSynergy groups (no GUI; the Cap'n Proto server is `fs-groups-server`).
 //!
 //! A group is an AS2 `Group` in an envelope stored through `fs-objects` (ADR 0014, 0020, 0050). Groups
 //! nest (several parents allowed, a cycle is refused), people belong to them with a role, people are
@@ -45,6 +45,7 @@ pub use repo::{
     PARENT_REQUEST_TYPE,
 };
 pub use traits::{
-    AiMarking, Delegations, DirectoryGroup, GroupDirectory, Groups, Invitations, Memberships,
+    AiMarking, Delegations, DirectoryGroup, GroupChange, GroupDirectory, GroupFeed, GroupListener,
+    Groups, Invitations, Memberships, Registry, Subscription,
 };
 pub use unsupported::not_possible;

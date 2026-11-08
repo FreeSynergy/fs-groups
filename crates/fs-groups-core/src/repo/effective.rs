@@ -37,6 +37,7 @@ impl GroupRepo {
 
     /// `member.read`: the groups a person belongs to: the ones they are in, and all their ancestors.
     pub async fn groups_of(&self, person: &str) -> Result<Vec<ObjectId>> {
+        let person = person.trim();
         let graph = self.graph().await?;
         let q = Query::new()
             .with_index("member_kind", "person")

@@ -26,6 +26,7 @@ fn group(id: ObjectId, flow: RightFlow, parents: Vec<ObjectId>) -> Group {
         kind: String::new(),
         parents,
         right_flow: flow,
+        envelope: fs_objects::Envelope::new("Group", "x"),
     }
 }
 

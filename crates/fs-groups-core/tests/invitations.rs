@@ -154,3 +154,37 @@ async fn an_invitation_to_an_unknown_group_or_without_invitee_is_refused() {
     );
     assert!(r.invite(g.id, " ", "", None).await.is_err());
 }
+
+#[tokio::test]
+async fn an_expired_invitation_answers_the_same_before_and_after_a_sweep() {
+    let r = repo().await;
+    let g = r.create("Club", "club").await.unwrap();
+    let (before, after) = (
+        r.invite(g.id, &person("ada"), "", Some(at(10)))
+            .await
+            .unwrap(),
+        r.invite(g.id, &person("ada"), "", Some(at(10)))
+            .await
+            .unwrap(),
+    );
+    let not_swept = Invitations::accept(&r, before.id, &person("ada"), at(20)).await;
+    assert!(matches!(not_swept, Err(Error::Expired(id)) if id == before.id));
+    assert_eq!(r.expire_due(at(20)).await.unwrap(), 1);
+    let swept = Invitations::accept(&r, after.id, &person("ada"), at(20)).await;
+    assert!(matches!(swept, Err(Error::Expired(id)) if id == after.id));
+    let wrong = Invitations::accept(&r, after.id, &person("bo"), at(20)).await;
+    assert!(matches!(wrong, Err(Error::NotInvitee(_))), "{wrong:?}");
+}
+
+#[tokio::test]
+async fn a_mail_invitation_cannot_be_accepted_by_saying_the_address() {
+    let r = repo().await;
+    let g = r.create("Club", "club").await.unwrap();
+    let inv = r.invite(g.id, "ada@example.org", "", None).await.unwrap();
+    let said = Invitations::accept(&r, inv.id, "ada@example.org", at(1)).await;
+    assert!(matches!(said, Err(Error::NotInvitee(_))), "{said:?}");
+    assert!(!r.is_member(g.id, "ada@example.org").await.unwrap());
+    r.accept_proved(inv.id, "ada@example.org", "ada@example.org", at(1))
+        .await
+        .unwrap();
+}
