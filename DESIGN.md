@@ -111,7 +111,7 @@ Version 0.2.0. **Several rules below are provisional: the owner is still answeri
   the owner**; it is not built away and `may_do` does not follow Kanidm's nesting. The effect clause has no counterpart in a
   directory and is not compared.
 * **Agents are never admin (ADR 0056, provisional).** This crate does not depend on fs-people: the host injects `AiMarking`
-  (`with_ai_marking`, wired to `RoleBook::is_ai`). Admin is `Right::Manage` plus the role ids of `with_admin_roles`. `grant` of
+  (`with_ai_marking`; the bridge is the crate `fs-groups-people`, `PeopleMarking`, which asks the role book and decides with `fs_people_core::is_ai_role`, so the short id `ai` and the full IRI both count; a person with no role, or an identity that is no `…/people/<id>`, gets no answer). Admin is `Right::Manage` plus the role ids of `with_admin_roles`. `grant` of
   `Manage` to a person and `add` (also through `accept`) of an admin role are refused for an agent (`AgentNotAdmin`) and **when
   there is no answer or no checker** (`AiStatusUnknown`); a failing checker is an error. Through a holder group: a group
   containing an agent **may** hold `Manage`, but `may_do` never counts a `Manage` delegation for a person who is an agent or not
