@@ -175,19 +175,19 @@ fn groups_create_find_change_delete_and_nesting() {
         .run("approve", Some(&request), &Values::new())
         .unwrap();
     let parents = groups.run("parents", Some(&board), &Values::new()).unwrap();
-    assert_eq!(parents.values["ids"], [staff.clone()]);
+    assert_eq!(parents.values["ids"], std::slice::from_ref(&staff));
     let children = groups
         .run("children", Some(&staff), &Values::new())
         .unwrap();
-    assert_eq!(children.values["ids"], [board.clone()]);
+    assert_eq!(children.values["ids"], std::slice::from_ref(&board));
     let up = groups
         .run("ancestors", Some(&board), &Values::new())
         .unwrap();
-    assert_eq!(up.values["ids"], [staff.clone()]);
+    assert_eq!(up.values["ids"], std::slice::from_ref(&staff));
     let down = groups
         .run("descendants", Some(&staff), &Values::new())
         .unwrap();
-    assert_eq!(down.values["ids"], [board.clone()]);
+    assert_eq!(down.values["ids"], std::slice::from_ref(&board));
 
     // a cycle is refused by the core and shows as a refusal, not as an unreachable program
     let loop_back = requests.run(
@@ -265,7 +265,7 @@ fn members_invitations_and_rights() {
     let of = members
         .run("groupsOf", None, &values(&[("person", &[ALICE])]))
         .unwrap();
-    assert_eq!(of.values["ids"], [g.clone()]);
+    assert_eq!(of.values["ids"], std::slice::from_ref(&g));
     members.run("remove", Some(&m), &Values::new()).unwrap();
     assert!(members.list(&Values::new()).unwrap().is_empty());
 

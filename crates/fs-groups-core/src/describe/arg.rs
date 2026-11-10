@@ -68,12 +68,14 @@ impl Arg {
     }
 
     /// A value is required.
+    #[must_use]
     pub const fn req(mut self) -> Self {
         self.required = true;
         self
     }
 
     /// A list of values.
+    #[must_use]
     pub const fn many(mut self) -> Self {
         self.multiple = true;
         self
