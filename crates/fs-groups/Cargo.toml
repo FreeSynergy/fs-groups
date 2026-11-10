@@ -20,7 +20,7 @@ fs-groups-server = { path = "../fs-groups-server" }
 fs-groups-app = { path = "../fs-groups-app", optional = true }
 
 [dev-dependencies]
-fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.1", features = ["rpc"] }
+fs-interfaces = { git = "https://www.github.com/FreeSynergy/fs-interfaces", tag = "v0.0.8", features = ["rpc"] }
 uuid = "1"
 tokio = { version = "1", features = ["full"] }
 tempfile = "3"

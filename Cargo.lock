@@ -363,8 +363,7 @@ dependencies = [
 [[package]]
 name = "blinc_app"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a93e66de48698f9617edb86cae2e6181b3ed5d62122e765f405690ba70c9f36"
+source = "git+https://github.com/FreeSynergy/blinc-app-fix?rev=5180d4eae80034d851d98464861f098d69eceaf0#5180d4eae80034d851d98464861f098d69eceaf0"
 dependencies = [
  "anyhow",
  "blinc_animation",
@@ -507,8 +506,7 @@ dependencies = [
 [[package]]
 name = "blinc_layout"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab5b1b6d2419f33e4bbefee10d5e02819923a4df5977760c5ca45b855039e4d2"
+source = "git+https://github.com/FreeSynergy/blinc-layout-fix?rev=cb17db8111f2037473e6e02b6784628ca0dca151#cb17db8111f2037473e6e02b6784628ca0dca151"
 dependencies = [
  "arboard",
  "blinc_animation",
@@ -1479,7 +1477,7 @@ dependencies = [
  "capnp",
  "fs-groups-app",
  "fs-groups-server",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://www.github.com/FreeSynergy/fs-interfaces?tag=v0.0.8)",
  "tempfile",
  "tokio",
  "uuid",
@@ -1494,7 +1492,7 @@ dependencies = [
  "fs-components-workbenches",
  "fs-groups-core",
  "fs-groups-server",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://www.github.com/FreeSynergy/fs-interfaces?tag=v0.0.8)",
  "fs-objects",
  "tempfile",
  "tokio",
@@ -1507,8 +1505,9 @@ version = "0.0.1"
 dependencies = [
  "async-trait",
  "chrono",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://www.github.com/FreeSynergy/fs-interfaces?tag=v0.0.8)",
  "fs-objects",
+ "fs-types",
  "icu_properties",
  "serde_json",
  "thiserror 2.0.21",
@@ -1537,7 +1536,7 @@ dependencies = [
  "capnp-rpc",
  "chrono",
  "fs-groups-core",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://www.github.com/FreeSynergy/fs-interfaces?tag=v0.0.8)",
  "fs-objects",
  "tempfile",
  "tokio",
@@ -1548,6 +1547,15 @@ dependencies = [
 name = "fs-interfaces"
 version = "0.0.1"
 source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.1#9f2d3a0626d7382b478c754eb31834146188dfab"
+dependencies = [
+ "capnp",
+ "idna",
+]
+
+[[package]]
+name = "fs-interfaces"
+version = "0.0.1"
+source = "git+https://www.github.com/FreeSynergy/fs-interfaces?tag=v0.0.8#8d9cc469cfc2fead4d0df2e66707e3996e95bf35"
 dependencies = [
  "capnp",
  "capnp-rpc",
@@ -1596,12 +1604,26 @@ dependencies = [
  "async-trait",
  "calcard",
  "chrono",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.1)",
  "fs-objects",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
  "tokio",
+]
+
+[[package]]
+name = "fs-types"
+version = "0.0.1"
+source = "git+https://www.github.com/FreeSynergy/fs-interfaces?tag=v0.0.8#8d9cc469cfc2fead4d0df2e66707e3996e95bf35"
+dependencies = [
+ "capnp",
+ "chrono",
+ "fs-interfaces 0.0.1 (git+https://www.github.com/FreeSynergy/fs-interfaces?tag=v0.0.8)",
+ "geo-uri",
+ "iri-string",
+ "oxilangtag",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -1735,6 +1757,15 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
+]
+
+[[package]]
+name = "geo-uri"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "951577f365723b622bfa73389a8def7393d56c28a3fc9aff3de17fae98fc868c"
+dependencies = [
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -2276,6 +2307,16 @@ dependencies = [
  "bitflags 2.13.2",
  "cfg-if",
  "libc",
+]
+
+[[package]]
+name = "iri-string"
+version = "0.7.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1663ee7d8cf2900cc1414b1e1eec9f348d6eaa3bcab07579f4726a4b8499f447"
+dependencies = [
+ "memchr",
+ "serde",
 ]
 
 [[package]]
@@ -3227,6 +3268,15 @@ name = "owo-colors"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
+
+[[package]]
+name = "oxilangtag"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d3b4eb570abd4a1dcb062c31fd37b832264d9dc7292c3e69acfe926c87b063f"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "pack1"

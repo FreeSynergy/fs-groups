@@ -1,7 +1,7 @@
 //! `Groups` root interface: support report, the four sub-capabilities, subscribe.
 //!
 //! Pattern: Adapter + Factory — the root hands out `Items`, `Memberships`, `Invitations` and
-//! `Delegations`. [`GroupsServer`] is what a program serves; it depends on the traits, never on
+//! `Delegations`, and the catalog of type descriptions (`types`, served by `fs_types::CatalogServer`). [`GroupsServer`] is what a program serves; it depends on the traits, never on
 //! `GroupRepo` (ADR 0043). The transport says who connected only as far as "this user"; no method
 //! of the contract names a verified caller (`DESIGN.md`).
 
@@ -9,8 +9,10 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use capnp_rpc::new_client;
+use fs_groups_core::describe;
 use fs_groups_core::{Delegations, Follows, GroupFeed, Groups, Invitations, Memberships};
 use fs_interfaces::groups_capnp::groups;
+use fs_types::CatalogServer;
 
 use crate::delegations_service::DelegationsImpl;
 use crate::feed::subscribe;
@@ -140,6 +142,19 @@ impl groups::Server for GroupsServer {
         results
             .get()
             .set_subscription(subscribe(&self.feed, listener));
+        Ok(())
+    }
+
+    async fn types(
+        self: Rc<Self>,
+        _: groups::TypesParams,
+        mut results: groups::TypesResults,
+    ) -> Done {
+        // The data types of this program and every command, also the ones it cannot run yet (ADR 0066).
+        let registry = describe::registry().map_err(|e| capnp::Error::failed(e.to_string()))?;
+        results
+            .get()
+            .set_catalog(new_client(CatalogServer::new(registry)));
         Ok(())
     }
 }
