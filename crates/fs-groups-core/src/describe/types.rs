@@ -4,12 +4,11 @@
 //! `TypeRegistry::register::<Group>()` puts it in the catalog `Groups.types` serves. Fields and commands both come
 //! from the tables (`fields.rs`, `commands.rs`); this file only turns rows into descriptions.
 //!
-//! The description holds **all** commands of the table, also those the program cannot run yet. fs-types has no
-//! `supported` field on a command yet, so the flag does not travel on the wire: a backend refuses the commands of
-//! [`unsupported_commands`](super::commands::unsupported_commands) itself (see `DESIGN.md`, "Unsupported").
+//! The description holds **all** commands of the table, also those the program cannot run yet; those carry
+//! `supported = false` on the wire. A backend refuses them as well ([`unsupported_commands`](super::commands::unsupported_commands)).
 
 use fs_types::{
-    CommandDescription, DescribesType, DescriptionProblem, TypeDescription, TypeRegistry,
+    CommandDescription, CommandKind, DescribesType, DescriptionProblem, TypeDescription, TypeRegistry,
 };
 
 use super::arg::kebab;
@@ -22,11 +21,15 @@ use crate::model::{Delegation, Delivery, Group, Invitation, Membership, ParentRe
 
 fn command_description(c: &Command) -> CommandDescription {
     let scope = format!("{}.{}", kebab(c.data_type), kebab(c.name));
-    let d = CommandDescription::new(c.name, c.kind, &scope);
+    let d = if c.kind == CommandKind::Find {
+        CommandDescription::standard_find(&scope, c.data_type)
+    } else {
+        CommandDescription::new(c.name, c.kind, &scope)
+    };
     let d = c.input.iter().fold(d, |d, a| d.input(a.to_field(&scope)));
     let d = c.result.iter().fold(d, |d, a| d.result(a.to_field(&scope)));
-    // SWITCH: set .supported(c.supported) when fs-types has it
-    d
+    // The flag travels on the wire (fs-interfaces v0.0.11): the missing commands are listed and locked.
+    if c.supported { d } else { d.unsupported() }
 }
 
 /// The description of the data type `name`, built from the tables.

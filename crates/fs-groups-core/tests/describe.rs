@@ -114,8 +114,12 @@ fn the_description_holds_all_commands_also_the_unsupported() {
     assert!(!unsupported.is_empty());
     for u in &unsupported {
         let (t, c) = u.split_once('.').unwrap();
-        assert!(reg.get(t).unwrap().find_command(c).is_some(), "{u} must be in the description");
+        let cmd = reg.get(t).unwrap().find_command(c).expect("in the description");
+        assert!(!cmd.supported, "{u} is locked on the wire");
     }
+    // ... and every other command is free.
+    let locked: usize = reg.iter().flat_map(|t| &t.commands).filter(|c| !c.supported).count();
+    assert_eq!(locked, unsupported.len());
     assert_eq!(
         unsupported,
         [
@@ -135,15 +139,34 @@ fn every_type_has_a_find_and_the_record_rules_hold() {
             let has_own_ref = c.input.iter().any(|a| a.basic == BasicType::Reference && a.target == *t);
             match c.kind {
                 // Change and delete work on one record: the input is a reference to the own type.
-                CommandKind::Change | CommandKind::Delete => assert!(has_own_ref, "{t}.{} needs its record", c.name),
+                CommandKind::Delete => assert!(has_own_ref, "{t}.{} needs its record", c.name),
+                // Change is an Edit: no input list (rule of types.capnp, checked by validate).
+                CommandKind::Change => assert!(c.input.is_empty()),
                 CommandKind::Create | CommandKind::Find => {}
                 _ => {}
             }
-            // A change names no field as required except the record (missing = unchanged).
-            if c.kind == CommandKind::Change {
-                assert!(c.input.iter().filter(|a| a.required).count() == 1);
-            }
         }
+    }
+}
+
+#[test]
+fn record_commands_are_the_ones_with_the_record_as_input() {
+    let g = Group::describe();
+    let names: Vec<&str> = g.record_commands().iter().map(|c| c.name.as_str()).collect();
+    for n in ["change", "delete", "parents", "children", "removeParent", "sync"] {
+        assert!(names.contains(&n), "{n}");
+    }
+    assert!(!names.contains(&"create") && !names.contains(&"find"));
+}
+
+#[test]
+fn find_is_the_standard_find() {
+    for t in TYPES {
+        let d = registry().unwrap();
+        let f = d.get(t).unwrap().find_command("find").unwrap();
+        assert_eq!(f.input[0].name, "term");
+        assert_eq!(f.result[0].name, "items");
+        assert_eq!(f.result[0].target, *t);
     }
 }
 

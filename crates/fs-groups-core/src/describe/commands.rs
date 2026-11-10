@@ -6,8 +6,9 @@
 //! (never left out), so the frontends show it locked and it switches on when the flag turns true.
 //!
 //! Rules that come from the strategy (thread T, 2026-11-10): the list of every type is `find` with an empty term
-//! and paging; **change** is typed field by field (missing = unchanged, empty = cleared); a command on one record
-//! has an input that is a reference to its own type. There is no patch command and no list command here.
+//! and paging (`CommandDescription::standard_find`; a row of kind `find` holds only the inputs beyond `term`);
+//! **change** is an `Edit`, typed field by field (missing = unchanged, empty = cleared); a command on one record has an
+//! input that is a reference to its own type. There is no patch command and no list command here.
 //!
 //! `covers` names the methods of the contract (`Interface.method`, as in `groups.capnp`) and of the core
 //! (`Type::method`) a command stands for; `change` stands for three contract methods. A method that is no
@@ -16,7 +17,7 @@
 use fs_types::BasicType as B;
 use fs_types::CommandKind as K;
 
-use super::arg::{Arg, FLOWS, JOIN_POLICIES, RIGHTS, YES_NO};
+use super::arg::{Arg, JOIN_POLICIES, RIGHTS, YES_NO};
 use super::fields::{
     DELEGATION, DELIVERY, GROUP, INVITATION, MEMBERSHIP, PARENT_REQUEST, SOURCE,
 };
@@ -56,12 +57,6 @@ const fn person_req() -> Arg {
 const fn text(name: &'static str) -> Arg {
     Arg::new(name, B::Text)
 }
-const fn cursor() -> Arg {
-    text("cursor")
-}
-const fn next() -> Arg {
-    text("next")
-}
 
 /// Every command, per data type.
 #[rustfmt::skip]
@@ -70,15 +65,15 @@ pub static COMMANDS: &[Command] = &[
     Command { data_type: GROUP, name: "create", kind: K::Create, supported: true, covers: &["Items.create"],
         input: &[Arg::new("name", B::Text).req(), text("kind")],
         result: &[id(GROUP)] },
-    // Typed change; the backend maps the fields that are present to rename, setKind and setRightFlow.
+    // Change is an `Edit` (types.capnp: the command's input list is empty, the edit names fields of the type: name, kind,
+    // rightFlow, parents is not editable here). The backend maps the fields present to rename, setKind and setRightFlow.
     Command { data_type: GROUP, name: "change", kind: K::Change, supported: true,
         covers: &["Items.rename", "Items.setKind", "Items.setRightFlow"],
-        input: &[id(GROUP), Arg::new("name", B::Text), text("kind"), Arg::choice("rightFlow", FLOWS)],
-        result: &[] },
-    // The list: an empty term lists everything. The contract pages by cursor; the term is applied by the backend.
+        input: &[], result: &[] },
+    // The list: an empty term lists everything (rule of types.capnp). The contract pages by cursor; the term is applied by the
+    // backend. A `find` row holds only the inputs beyond `term`; input `term` and the result `items` are the standard find.
     Command { data_type: GROUP, name: "find", kind: K::Find, supported: true, covers: &["Items.list", "Items.get"],
-        input: &[text("term"), cursor()],
-        result: &[Arg::reference("groups", GROUP).many(), next()] },
+        input: &[], result: &[] },
     Command { data_type: GROUP, name: "delete", kind: K::Delete, supported: true, covers: &["Items.delete"],
         input: &[id(GROUP)], result: &[] },
     Command { data_type: GROUP, name: "parents", kind: K::Other, supported: true, covers: &["Items.parents"],
@@ -106,7 +101,7 @@ pub static COMMANDS: &[Command] = &[
         result: &[id(PARENT_REQUEST)] },
     // The contract reads per parent; with no parent the backend reads every group.
     Command { data_type: PARENT_REQUEST, name: "find", kind: K::Find, supported: true, covers: &["Items.parentRequests"],
-        input: &[Arg::reference("parent", GROUP)], result: &[Arg::reference("requests", PARENT_REQUEST).many()] },
+        input: &[Arg::reference("parent", GROUP)], result: &[] },
     Command { data_type: PARENT_REQUEST, name: "approve", kind: K::Other, supported: true, covers: &["Items.approveParent"],
         input: &[id(PARENT_REQUEST)], result: &[Arg::reference("group", GROUP)] },
     Command { data_type: PARENT_REQUEST, name: "decline", kind: K::Other, supported: true, covers: &["Items.declineParent"],
@@ -118,8 +113,7 @@ pub static COMMANDS: &[Command] = &[
     Command { data_type: MEMBERSHIP, name: "remove", kind: K::Delete, supported: true, covers: &["Memberships.remove"],
         input: &[id(MEMBERSHIP)], result: &[] },
     Command { data_type: MEMBERSHIP, name: "find", kind: K::Find, supported: true, covers: &["Memberships.direct"],
-        input: &[group_opt(), cursor()],
-        result: &[Arg::reference("memberships", MEMBERSHIP).many(), next()] },
+        input: &[group_opt()], result: &[] },
     // The paths are parallel to the persons: for person n, the groups from the asked group to the direct membership.
     Command { data_type: MEMBERSHIP, name: "effective", kind: K::Other, supported: true, covers: &["Memberships.effective"],
         input: &[group_req()],
@@ -145,7 +139,7 @@ pub static COMMANDS: &[Command] = &[
     Command { data_type: INVITATION, name: "revoke", kind: K::Other, supported: true, covers: &["Invitations.revoke"],
         input: &[id(INVITATION)], result: &[] },
     Command { data_type: INVITATION, name: "find", kind: K::Find, supported: true, covers: &["Invitations.list"],
-        input: &[group_opt()], result: &[Arg::reference("invitations", INVITATION).many()] },
+        input: &[group_opt()], result: &[] },
     // Core `Invitations::expire_due` (a sweep, an addition to the contract); no contract method.
     Command { data_type: INVITATION, name: "expireDue", kind: K::Other, supported: false, covers: &["Invitations::expire_due"],
         input: &[], result: &[text("expired")] },
@@ -156,7 +150,7 @@ pub static COMMANDS: &[Command] = &[
     Command { data_type: DELEGATION, name: "revoke", kind: K::Delete, supported: true, covers: &["Delegations.revoke"],
         input: &[id(DELEGATION)], result: &[] },
     Command { data_type: DELEGATION, name: "find", kind: K::Find, supported: true, covers: &["Delegations.list"],
-        input: &[group_opt()], result: &[Arg::reference("delegations", DELEGATION).many()] },
+        input: &[group_opt()], result: &[] },
     Command { data_type: DELEGATION, name: "mayDo", kind: K::Check, supported: true, covers: &["Delegations.mayDo"],
         input: &[group_req(), person_req(), Arg::choice("right", RIGHTS).req()],
         result: &[Arg::choice("allowed", YES_NO)] },
@@ -172,7 +166,7 @@ pub static COMMANDS: &[Command] = &[
     Command { data_type: DELIVERY, name: "revoke", kind: K::Delete, supported: true, covers: &["Follows.revoke"],
         input: &[id(DELIVERY)], result: &[] },
     Command { data_type: DELIVERY, name: "find", kind: K::Find, supported: true, covers: &["Follows.deliveries"],
-        input: &[group_opt()], result: &[Arg::reference("deliveries", DELIVERY).many()] },
+        input: &[group_opt()], result: &[] },
     // ---- Source (following) ----
     Command { data_type: SOURCE, name: "receive", kind: K::Create, supported: true, covers: &["Follows.receive"],
         input: &[Arg::new("sender", B::Link).req(), text("delivery").req(), Arg::new("source", B::Link).req(),
@@ -185,7 +179,7 @@ pub static COMMANDS: &[Command] = &[
     Command { data_type: SOURCE, name: "remove", kind: K::Delete, supported: true, covers: &["Follows.removeSource"],
         input: &[id(SOURCE)], result: &[] },
     Command { data_type: SOURCE, name: "find", kind: K::Find, supported: true, covers: &["Follows.sources"],
-        input: &[group_opt()], result: &[Arg::reference("sources", SOURCE).many()] },
+        input: &[group_opt()], result: &[] },
 ];
 
 /// Methods that are no command, and why.

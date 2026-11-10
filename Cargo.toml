@@ -17,4 +17,4 @@ blinc_layout = { git = "https://github.com/FreeSynergy/blinc-layout-fix", rev = 
 # fs-admin-frontend (rev 4688cee) was built against fs-types v0.0.2; the catalog served here is v0.0.8. One
 # `fs-types` for the whole build, or the frontend would not take the descriptions of this program.
 [patch."https://github.com/FreeSynergy/fs-interfaces"]
-fs-types = { git = "https://www.github.com/FreeSynergy/fs-interfaces", tag = "v0.0.8" }
+fs-types = { git = "https://www.github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11" }
