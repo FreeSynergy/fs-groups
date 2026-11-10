@@ -10,14 +10,19 @@ use std::rc::Rc;
 use std::sync::mpsc;
 use std::thread;
 
-use fs_interfaces::groups_capnp::{groups, items, memberships};
+use fs_interfaces::groups_capnp::{delegations, follows, groups, invitations, items, memberships};
 use fs_interfaces::rpc::connect;
 
-use super::model::ApiError;
+use super::error::RunError;
 
-pub(super) struct Clients {
-    pub(super) items: items::Client,
-    pub(super) memberships: memberships::Client,
+/// The capabilities of the root, fetched once.
+pub struct Clients {
+    pub(crate) root: groups::Client,
+    pub(crate) items: items::Client,
+    pub(crate) memberships: memberships::Client,
+    pub(crate) invitations: invitations::Client,
+    pub(crate) delegations: delegations::Client,
+    pub(crate) follows: follows::Client,
 }
 
 type Job = Box<dyn FnOnce(Rc<Clients>) -> Pin<Box<dyn Future<Output = ()>>> + Send>;
@@ -44,11 +49,27 @@ impl GroupsRemote {
         Ok(Self { jobs })
     }
 
-    pub(super) fn run<T, F, Fut>(&self, make: F) -> Result<T, ApiError>
+    /// The catalog of type descriptions the server serves (`Groups.types`).
+    ///
+    /// # Errors
+    /// [`RunError`] when the server cannot be asked or answers something that is no catalog.
+    pub fn catalog(&self) -> Result<fs_types::TypeRegistry, RunError> {
+        self.run(|c| async move {
+            let catalog = c.root.types_request().send().promise.await?.get()?.get_catalog()?;
+            let answer = catalog.describe_request().send().promise.await?;
+            fs_types::TypeRegistry::read(answer.get()?.get_types()?).map_err(RunError::from)
+        })
+    }
+
+    /// Run one job on the worker and wait for its answer.
+    ///
+    /// # Errors
+    /// What the job returns, or [`RunError::Unavailable`] when the worker is gone.
+    pub fn run<T, F, Fut>(&self, make: F) -> Result<T, RunError>
     where
         T: Send + 'static,
         F: FnOnce(Rc<Clients>) -> Fut + Send + 'static,
-        Fut: Future<Output = Result<T, ApiError>> + 'static,
+        Fut: Future<Output = Result<T, RunError>> + 'static,
     {
         let (reply, answer) = mpsc::channel();
         let job: Job = Box::new(move |clients| {
@@ -61,8 +82,8 @@ impl GroupsRemote {
     }
 }
 
-pub(super) fn gone() -> ApiError {
-    ApiError::Failed("the groups server went away".into())
+fn gone() -> RunError {
+    RunError::Unavailable("the groups server went away".into())
 }
 
 fn worker(
@@ -106,13 +127,7 @@ fn worker(
 }
 
 async fn open(root: &groups::Client) -> capnp::Result<Clients> {
-    let items = root
-        .items_request()
-        .send()
-        .promise
-        .await?
-        .get()?
-        .get_items()?;
+    let items = root.items_request().send().promise.await?.get()?.get_items()?;
     let memberships = root
         .memberships_request()
         .send()
@@ -120,5 +135,33 @@ async fn open(root: &groups::Client) -> capnp::Result<Clients> {
         .await?
         .get()?
         .get_memberships()?;
-    Ok(Clients { items, memberships })
+    let invitations = root
+        .invitations_request()
+        .send()
+        .promise
+        .await?
+        .get()?
+        .get_invitations()?;
+    let delegations = root
+        .delegations_request()
+        .send()
+        .promise
+        .await?
+        .get()?
+        .get_delegations()?;
+    let follows = root
+        .follows_request()
+        .send()
+        .promise
+        .await?
+        .get()?
+        .get_follows()?;
+    Ok(Clients {
+        root: root.clone(),
+        items,
+        memberships,
+        invitations,
+        delegations,
+        follows,
+    })
 }

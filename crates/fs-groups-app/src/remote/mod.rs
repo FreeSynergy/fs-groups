@@ -1,12 +1,9 @@
-//! `GroupsRemote`: the groups server behind a socket, as a [`GroupsApi`].
+//! The connection to the groups server: a proxy with a worker thread, and the errors of a call.
 //!
-//! Pattern: Proxy — `proxy.rs` is the proxy and its worker thread, `api.rs` the requests,
-//! `convert.rs` the conversions from the wire, `model.rs` the types and the trait.
+//! Pattern: Proxy (`proxy.rs`) + Adapter (`error.rs`).
 
-mod api;
-mod convert;
-mod model;
+mod error;
 mod proxy;
 
-pub use model::{ApiError, Group, GroupsApi, Member};
-pub use proxy::GroupsRemote;
+pub use error::RunError;
+pub use proxy::{Clients, GroupsRemote};

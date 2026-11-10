@@ -1,8 +1,9 @@
-//! `fs-groups-app`: the window of the groups program (ADR 0005, 0009, 0063).
+//! `fs-groups-app`: the window of the groups program (ADR 0005, 0009, 0063, 0065, 0066).
 //!
-//! The groups program talks over `groups.capnp`; this crate is the frontend: a proxy to the server
-//! ([`GroupsRemote`]), an adapter to the list-and-page workbench of `fs-components`
-//! ([`GroupsAdapter`]) and the window ([`gui::run`]). It imports no `blinc_*` crate.
+//! The groups program talks over `groups.capnp`; this crate is **shell and wiring only**: it reads the catalog the
+//! server serves (`Groups.types`), gives each data type a [`GroupsBackend`] over the socket and lets
+//! `fs-admin-frontend` generate list, detail, forms and command buttons inside the standard window shell
+//! (`fs-components-app`). It has no render code and no look of its own (ADR 0066); it imports no `blinc_*` crate.
 //!
 //! Pattern: Facade — this file only declares modules and re-exports the public API.
 
@@ -10,11 +11,11 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
-mod adapter;
+mod backend;
 pub mod gui;
 mod remote;
 mod words;
 
-pub use adapter::GroupsAdapter;
-pub use remote::{Group, GroupsApi, GroupsRemote, Member};
-pub use words::{TITLE, labels};
+pub use backend::{GroupChange, GroupsBackend, plan_change};
+pub use remote::{Clients, GroupsRemote, RunError};
+pub use words::{English, TITLE, humanise};

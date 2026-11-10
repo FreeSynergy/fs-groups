@@ -1,19 +1,24 @@
 //! The window of `fs-groups` (ADR 0063): wiring only.
 //!
 //! Pattern: Facade consumer — connect to the server (starting it if none answers on the user's own
-//! socket), build the workbench, open the window or draw one picture.
+//! socket), read its catalog of type descriptions, give every data type a surface of the generated Admin frontend
+//! and put them in the standard window shell (ADR 0065); open the window or draw one picture.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use fs_components_app::{
-    AppError, AppWidget, Element, Screen, Surface, WindowOptions, launch, parse_size,
-};
-use fs_components_workbenches::people::{PeopleSource, PeopleWidget};
+use fs_admin_frontend::view::{AboutInfo, AdminSurface};
+use fs_admin_frontend::window::{TypeView, admin_window};
+use fs_admin_frontend::{Backend, Session, SystemClock};
+use fs_components_app::{AppError, AppWidget, WindowOptions, launch, parse_size};
+use fs_components_fields::{Look, Say};
+use fs_components_styles::StyleId;
+use fs_groups_core::describe::TYPES;
 use fs_interfaces::rpc::default_socket;
+use fs_types::TypeRegistry;
 
-use crate::words::{TITLE, labels};
-use crate::{GroupsAdapter, GroupsRemote};
+use crate::words::{English, TITLE};
+use crate::{GroupsBackend, GroupsRemote};
 
 /// The help text.
 pub const HELP: &str = "fs-groups: the groups window (without arguments it opens)
@@ -23,26 +28,57 @@ pub const HELP: &str = "fs-groups: the groups window (without arguments it opens
   --snapshot <png>   draw a picture instead of opening a window
   --size <WxH>       window or picture size (default 1200x800)";
 
-struct GroupsScreen(PeopleWidget);
+/// The page the Help entry opens.
+pub const HELP_URL: &str =
+    "https://github.com/FreeSynergy/fs-documentation/blob/main/docs/en/programs/platform/groups.md";
 
-impl Surface for GroupsScreen {
-    fn build(&self, width: f32, height: f32) -> Box<dyn Element> {
-        Box::new(self.0.build(width, height))
-    }
-
-    fn styles(&self) -> String {
-        self.0.styles()
+fn about() -> AboutInfo {
+    AboutInfo {
+        name: "FreeSynergy.Groups".into(),
+        version: format!("v{}", env!("CARGO_PKG_VERSION")),
+        origin: "https://github.com/FreeSynergy/fs-groups".into(),
+        licence: "MIT OR Apache-2.0".into(),
+        repository: "https://github.com/FreeSynergy/fs-groups".into(),
     }
 }
 
-/// The shell around the workbench over `source`.
+/// The window over the groups server behind `remote`: a screen per data type of the catalog the server serves.
+///
+/// # Errors
+/// The text for the person: the catalog cannot be read, or the shell cannot be made.
+pub fn app_widget(remote: &Arc<GroupsRemote>) -> Result<AppWidget, String> {
+    let catalog = remote.catalog().map_err(|e| format!("{e:?}"))?;
+    app_widget_for(remote, &catalog).map_err(|e| e.to_string())
+}
+
+/// As [`app_widget`], over a catalog already read.
 ///
 /// # Errors
 /// [`AppError`] if the shell cannot be made.
-pub fn app_widget(source: Arc<dyn PeopleSource>) -> Result<AppWidget, AppError> {
-    let widget = PeopleWidget::new(source, labels());
-    let screen = Screen::new("groups", TITLE, Arc::new(GroupsScreen(widget)));
-    AppWidget::new(TITLE, vec![screen])
+pub fn app_widget_for(
+    remote: &Arc<GroupsRemote>,
+    catalog: &TypeRegistry,
+) -> Result<AppWidget, AppError> {
+    let say: Arc<dyn Say> = Arc::new(English);
+    let views = TYPES
+        .iter()
+        .filter_map(|name| catalog.get(name).map(|d| (*name, d.clone())))
+        .map(|(name, description)| {
+            let backend: Arc<dyn Backend> = Arc::new(GroupsBackend::new(Arc::clone(remote), name));
+            let session = Session::new(description.clone(), backend, Arc::new(SystemClock::new()));
+            TypeView {
+                id: name.to_owned(),
+                label: description.label.clone(),
+                surface: Arc::new(AdminSurface::new(
+                    session,
+                    Look::new(StyleId::Admin, false),
+                    Arc::clone(&say),
+                    None,
+                )),
+            }
+        })
+        .collect();
+    admin_window(TITLE, &say, views, about(), HELP_URL.to_owned())
 }
 
 struct Args {
@@ -93,8 +129,7 @@ pub fn run(words: &[String]) -> Result<(), String> {
         .or_else(|| default_socket("groups"))
         .ok_or("no socket: give --socket or set XDG_RUNTIME_DIR")?;
     let remote = connect_or_start(&socket, args.socket.is_none())?;
-    let adapter = GroupsAdapter::new(Arc::new(remote));
-    let app = app_widget(Arc::new(adapter)).map_err(|e| e.to_string())?;
+    let app = app_widget(&Arc::new(remote))?;
     let (width, height) = args.size;
     if let Some(file) = &args.snapshot {
         app.picture(width, height, file)

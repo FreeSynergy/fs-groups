@@ -12,7 +12,7 @@ use capnp_rpc::new_client;
 use fs_groups_core::describe;
 use fs_groups_core::{Delegations, Follows, GroupFeed, Groups, Invitations, Memberships};
 use fs_interfaces::groups_capnp::groups;
-use fs_types::CatalogServer;
+use fs_types::describe::CatalogServer;
 
 use crate::delegations_service::DelegationsImpl;
 use crate::feed::subscribe;

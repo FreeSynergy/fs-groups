@@ -9,12 +9,12 @@ rust-version.workspace = true
 [dependencies]
 fs-groups-core = { path = "../fs-groups-core" }
 # The generated frontend and the shell. One commit for all of them (the frontend's own dependencies are paths in it).
-fs-admin-frontend = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
-fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
-fs-components-fields = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
-fs-components-styles = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
-fs-interfaces = { git = "https://www.github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11", features = ["rpc"] }
-fs-types = { git = "https://www.github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11" }
+fs-admin-frontend = { git = "https://github.com/FreeSynergy/fs-components", rev = "7b47a65" }
+fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", rev = "7b47a65" }
+fs-components-fields = { git = "https://github.com/FreeSynergy/fs-components", rev = "7b47a65" }
+fs-components-styles = { git = "https://github.com/FreeSynergy/fs-components", rev = "7b47a65" }
+fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11", features = ["rpc"] }
+fs-types = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11" }
 capnp = "0.27"
 uuid = "1"
 chrono = { version = "0.4", default-features = false, features = ["std"] }

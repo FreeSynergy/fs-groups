@@ -14,7 +14,3 @@ rust-version = "1.85"
 blinc_app = { git = "https://github.com/FreeSynergy/blinc-app-fix", rev = "5180d4eae80034d851d98464861f098d69eceaf0" }
 blinc_layout = { git = "https://github.com/FreeSynergy/blinc-layout-fix", rev = "cb17db8111f2037473e6e02b6784628ca0dca151" }
 
-# fs-admin-frontend (rev 4688cee) was built against fs-types v0.0.2; the catalog served here is v0.0.8. One
-# `fs-types` for the whole build, or the frontend would not take the descriptions of this program.
-[patch."https://github.com/FreeSynergy/fs-interfaces"]
-fs-types = { git = "https://www.github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11" }
