@@ -87,7 +87,9 @@ pub fn deliver(remote: &GroupsRemote, v: &Values) -> Result<Outcome, RunError> {
         write_rights(|n| r.get().init_rights(n), &rights);
         r.get().set_pass_on(pass_on);
         let answer = r.send().promise.await?;
-        Ok(outcome_id(read::delivery(answer.get()?.get_delivery()?)?.id))
+        Ok(outcome_id(
+            read::delivery(answer.get()?.get_delivery()?)?.id,
+        ))
     })
 }
 
@@ -102,7 +104,9 @@ pub fn relay(remote: &GroupsRemote, v: &Values) -> Result<Outcome, RunError> {
         r.get().set_recipient(recipient.as_str());
         write_rights(|n| r.get().init_rights(n), &rights);
         let answer = r.send().promise.await?;
-        Ok(outcome_id(read::delivery(answer.get()?.get_delivery()?)?.id))
+        Ok(outcome_id(
+            read::delivery(answer.get()?.get_delivery()?)?.id,
+        ))
     })
 }
 

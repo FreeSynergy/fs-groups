@@ -55,7 +55,14 @@ impl GroupsRemote {
     /// [`RunError`] when the server cannot be asked or answers something that is no catalog.
     pub fn catalog(&self) -> Result<fs_types::TypeRegistry, RunError> {
         self.run(|c| async move {
-            let catalog = c.root.types_request().send().promise.await?.get()?.get_catalog()?;
+            let catalog = c
+                .root
+                .types_request()
+                .send()
+                .promise
+                .await?
+                .get()?
+                .get_catalog()?;
             let answer = catalog.describe_request().send().promise.await?;
             fs_types::TypeRegistry::read(answer.get()?.get_types()?).map_err(RunError::from)
         })
@@ -127,7 +134,13 @@ fn worker(
 }
 
 async fn open(root: &groups::Client) -> capnp::Result<Clients> {
-    let items = root.items_request().send().promise.await?.get()?.get_items()?;
+    let items = root
+        .items_request()
+        .send()
+        .promise
+        .await?
+        .get()?
+        .get_items()?;
     let memberships = root
         .memberships_request()
         .send()

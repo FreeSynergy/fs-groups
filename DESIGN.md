@@ -259,8 +259,65 @@ Ids are typed: a source id is `NotFound` for `revoke_delivery` and a delivery id
 Core: `fs-objects` (git tag v0.5.0), `fs-interfaces` (git tag v0.46.0), `serde_json`, `chrono`, `thiserror`, `async-trait`, `tokio` (sync only; dev: full). Server: also `fs-interfaces` feature `rpc`, `capnp`, `capnp-rpc`; dev: `tempfile`, `uuid`.
 All MIT / Apache-2.0. No Kanidm dependency of any kind.
 
-## One binary `fs-groups` and its window (ADR 0063, 2026-11-08)
+## One binary `fs-groups` and its window (ADR 0063, 0065, 0066; rebuilt in thread R3, 2026-11-10)
 
-`crates/fs-groups` is the only binary: `fs-groups` without arguments opens the window, `fs-groups serve` runs the server (`fs_groups_server::serve`), feature `gui` (default) builds the window. `fs-groups-server` and `fs-groups-app` are libraries. The window (`crates/fs-groups-app`) is a frontend over `groups.capnp`: `GroupsApi` (trait first) with `GroupsRemote` (a worker thread owns the Cap'n Proto connection) and `GroupsAdapter`, which gives the groups to the list-and-page workbench of `fs-components` (built for people, neutral in what it shows) as rows (name, kind), a sheet (kind, what the group is part of, its direct members) and a form (name, kind). If no server answers on the user's own socket the window starts `fs-groups serve` detached. Tests: `tests/remote.rs` (real server, real store), `crates/fs-groups/tests/binary.rs` (the real binary).
+`crates/fs-groups` is the only binary: `fs-groups` without arguments opens the window, `fs-groups serve` runs the server, feature `gui` (default) builds the window.
 
-Not in the window yet (nothing pretends otherwise): nesting (requests, approval), adding and removing members, invitations, delegations, rights, follows, mirrors; no revision on the wire, so a change by someone else is not detected on save; no timeout waiting for the server.
+**The window is shell plus generated frontend, nothing else (ADR 0066).** `crates/fs-groups-app` reads the catalog `Groups.types` of the server, gives every data type a `GroupsBackend` (the frontend's `Backend` trait over the Cap'n Proto socket) and lets `fs-admin-frontend` (fs-components, rev `7b47a65`, built for fs-types v0.0.11) generate list, detail, forms and command buttons inside the standard window shell `fs-components-app`. It has **no render code and no look**: it imports no `blinc_*` crate, and the former adapter to the people workbench is gone (its history is in git). Blinc comes through `blinc-app-fix` / `blinc-layout-fix` at the same revs as fs-tasks (`[patch.crates-io]` in the workspace `Cargo.toml`).
+
+Nothing moved to `fs-components` in this thread: the repo held no drawing code (the old window only wired the people workbench). A **tree view of nesting** (parents, children, the path of an effective membership) would be a component; it is not built and the information is shown as lists of ids instead (see Unsupported).
+
+### Data types and commands (ADR 0066)
+
+| Type | Standard | Fields |
+|---|---|---|
+| `Group` | AS2 `Group` | name, kind, parents, rightFlow |
+| `Membership` | `org:Membership` | group, member, role, inForce |
+| `Invitation` | AS2 `Invite` | group, invitee, role, state, expires |
+| `Delegation` | own specification (gap) | group, holder, right, inForce |
+| `ParentRequest` | own specification (gap) | child, parent, requester, state |
+| `Delivery`, `Source` | AS2 `Invite` (offer), own specification | following; see the contract |
+
+`crates/fs-groups-core/src/describe/`: `commands.rs` is **the one table** of commands (name, kind, `supported`, `covers` = the methods of the contract and the core it stands for, inputs, results). `fields.rs` is the table of fields, `types.rs` makes `DescribesType` for each model type and `registry()` from them. **The description holds all commands**, also those the program cannot run yet; they carry `supported = false` on the wire (fs-interfaces v0.0.11, the switch of the coordinator is done: the line marked in `types.rs`). `GroupsBackend::supported(name)` answers from the same table and `run` refuses what is not there (`RunError::Unsupported`, the frontend's trait has no such variant, so the trait answers `NotFound`).
+
+Rules followed: the list of every type is `find` (standard find; the term is applied in the backend, the contract pages by cursor; a `find` with no group named asks every group); **change is an `Edit`** (`Group.change`: name, kind, rightFlow; a field not in the edit stays, an empty one is cleared; `parents` change through the nesting commands and are refused as a bad value); record commands are the ones with a reference to their own type, plus change and delete. Ids are the UUID text; a member or holder is a person IRI, or a group id (read as a group when it is a UUID).
+
+Tests: `fs-groups-core/tests/describe.rs` (every method of `groups.capnp` is a command or named in `NOT_COMMANDS`; core-only methods are in the table as unsupported; every promise of `groups.md` is a command; validation; the standard find; locked flags), `fs-groups-server/tests/types.rs` (the catalog over a real socket), `fs-groups-app/tests/backend.rs` (every runnable kind of command against the real server and a real store, the refusal of the others), `tests/window.rs` (menus and a screen per type). There is no `requirements.md` for groups; the requirement source is `docs/en/programs/platform/groups.md`, `groups.capnp` and the core traits.
+
+### Unsupported (named, not faked)
+
+| What | Why | State |
+|---|---|---|
+| `Group.sync`, `Group.divergences` | the core has `Mirror::sync_to` and `divergences`, the contract has no method for them (it needs a directory provider) | locked, `supported = false` |
+| `Group.setJoinPolicy`, `Membership.requestJoin` | `groups.md` (question 3, decided 2026-11-07: by invitation, open, on request) - neither core nor contract has it | locked |
+| `Invitation.expireDue` | core sweep, not in the contract | locked |
+| Votes through `fs-surveys` | belongs to surveys | not a command here |
+| `Groups.subscribe` | a stream of changes; the frontend reads again on its own events instead | no command |
+| A tree view of nesting | no component in `fs-components` | lists of ids |
+| Names instead of ids in references | the frontend shows a reference as its id; a group's name needs a lookup component | ids |
+| `Delegation`/`Membership` `change` | the core has no change for these (remove and add again) | not in the table |
+| `Right` choices are the contract's (`manage` is refused in a delivery by the core) | provisional rule of the core | as the core says |
+
+### Found limits of the generated frontend (reported)
+
+* `BackendError` has no variant for "the program refused by its rules" (cycle, forbidden, expired, not the invitee). The backend maps it to `Rejected` on the first sent input field with the finding `choice.not-in-list`, so the text shown is wrong; a variant with a code is needed (`problem.groups/cycle` ...).
+* A reference field shows an id; a lookup of the target's compact component is not there.
+* `crates/fs-groups` ships the server and the window in one binary; the window starts `fs-groups serve` when nothing answers (unchanged).
+
+### Pattern map of the window
+
+| Module | Pattern | Why |
+|---|---|---|
+| `describe/commands.rs`, `fields.rs`, `arg.rs` | Registry (table) + Value object | one source for the description, the refusals and the tests |
+| `describe/types.rs` | Registry entry (trait first) | `DescribesType` for each model type |
+| `fs-groups-server` `types` | Adapter | `Groups.types` served by `fs_types::describe::CatalogServer` |
+| `fs-groups-app/src/remote` | Proxy + Adapter | a worker thread owns the connection; typed problems become `RunError` |
+| `fs-groups-app/src/backend/mod.rs` | Repository (frontend trait) as Facade | one backend per type, table decides |
+| `backend/groups_ops.rs`, `members_ops.rs`, `follow_ops.rs` | Command over a Proxy | one function per command; no rule here |
+| `backend/input.rs`, `backend/read.rs` | Adapter | typed input to the wire, wire to records |
+| `words.rs` | Strategy (`Say`) | all English text in one place (ADR 0057) |
+| `gui.rs` | Facade | catalog, backend per type, `admin_window` |
+
+### Build note
+
+`fs-interfaces` and `fs-types` are pinned to tag `v0.0.11` and `fs-components` to rev `7b47a65` of the branch `thread-a-admin-frontend` (provisional until A is tagged; the brief named `4688cee`, which does not compile against fs-types v0.0.11).

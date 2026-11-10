@@ -83,7 +83,9 @@ pub fn add(remote: &GroupsRemote, v: &Values) -> Result<Outcome, RunError> {
         set_member(r.get().init_member(), &who);
         r.get().set_role(role.as_str());
         let answer = r.send().promise.await?;
-        Ok(outcome_id(read::membership(answer.get()?.get_membership()?)?.id))
+        Ok(outcome_id(
+            read::membership(answer.get()?.get_membership()?)?.id,
+        ))
     })
 }
 
@@ -149,7 +151,10 @@ pub fn is_member(remote: &GroupsRemote, v: &Values) -> Result<Outcome, RunError>
         r.get().set_person(person.as_str());
         let answer = r.send().promise.await?;
         let mut values = Values::new();
-        values.insert("member".into(), vec![input::yes_no(answer.get()?.get_member()).into()]);
+        values.insert(
+            "member".into(),
+            vec![input::yes_no(answer.get()?.get_member()).into()],
+        );
         Ok(Outcome { id: None, values })
     })
 }
@@ -186,7 +191,9 @@ pub fn invite(remote: &GroupsRemote, v: &Values) -> Result<Outcome, RunError> {
             r.get().init_expires().set_unix_millis(ms);
         }
         let answer = r.send().promise.await?;
-        Ok(outcome_id(read::invitation(answer.get()?.get_invitation()?)?.id))
+        Ok(outcome_id(
+            read::invitation(answer.get()?.get_invitation()?)?.id,
+        ))
     })
 }
 
@@ -194,7 +201,11 @@ pub fn invite(remote: &GroupsRemote, v: &Values) -> Result<Outcome, RunError> {
 pub fn accept(remote: &GroupsRemote, v: &Values, proved: bool) -> Result<Outcome, RunError> {
     let id = input::id(v, "id")?;
     let person = input::need(v, "person")?.to_owned();
-    let address = if proved { input::need(v, "provedAddress")?.to_owned() } else { String::new() };
+    let address = if proved {
+        input::need(v, "provedAddress")?.to_owned()
+    } else {
+        String::new()
+    };
     remote.run(move |c| async move {
         if proved {
             let mut r = c.invitations.accept_proved_request();
@@ -214,7 +225,11 @@ pub fn accept(remote: &GroupsRemote, v: &Values, proved: bool) -> Result<Outcome
 }
 
 /// `decline` and `revoke` of an invitation.
-pub fn end_invitation(remote: &GroupsRemote, v: &Values, decline: bool) -> Result<Outcome, RunError> {
+pub fn end_invitation(
+    remote: &GroupsRemote,
+    v: &Values,
+    decline: bool,
+) -> Result<Outcome, RunError> {
     let id = input::id(v, "id")?;
     remote.run(move |c| async move {
         if decline {
@@ -258,7 +273,9 @@ pub fn grant(remote: &GroupsRemote, v: &Values) -> Result<Outcome, RunError> {
         set_member(r.get().init_holder(), &holder);
         r.get().set_right(right);
         let answer = r.send().promise.await?;
-        Ok(outcome_id(read::delegation(answer.get()?.get_delegation()?)?.id))
+        Ok(outcome_id(
+            read::delegation(answer.get()?.get_delegation()?)?.id,
+        ))
     })
 }
 
@@ -285,7 +302,10 @@ pub fn may_do(remote: &GroupsRemote, v: &Values) -> Result<Outcome, RunError> {
         r.get().set_right(right);
         let answer = r.send().promise.await?;
         let mut values = Values::new();
-        values.insert("allowed".into(), vec![input::yes_no(answer.get()?.get_allowed()).into()]);
+        values.insert(
+            "allowed".into(),
+            vec![input::yes_no(answer.get()?.get_allowed()).into()],
+        );
         Ok(Outcome { id: None, values })
     })
 }

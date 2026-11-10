@@ -30,7 +30,10 @@ async fn types_serves_the_whole_catalog() {
         }
         let group = read.get("Group").unwrap();
         assert_eq!(group.program, "fs-groups");
-        assert!(group.find_command("setJoinPolicy").is_some(), "unsupported commands are described too");
+        assert!(
+            group.find_command("setJoinPolicy").is_some(),
+            "unsupported commands are described too"
+        );
     })
     .await;
 }

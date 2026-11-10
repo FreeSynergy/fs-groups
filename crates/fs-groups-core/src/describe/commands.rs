@@ -18,9 +18,7 @@ use fs_types::BasicType as B;
 use fs_types::CommandKind as K;
 
 use super::arg::{Arg, JOIN_POLICIES, RIGHTS, YES_NO};
-use super::fields::{
-    DELEGATION, DELIVERY, GROUP, INVITATION, MEMBERSHIP, PARENT_REQUEST, SOURCE,
-};
+use super::fields::{DELEGATION, DELIVERY, GROUP, INVITATION, MEMBERSHIP, PARENT_REQUEST, SOURCE};
 
 /// One command of one data type.
 #[derive(Clone, Copy, Debug)]
@@ -169,12 +167,12 @@ pub static COMMANDS: &[Command] = &[
         input: &[group_opt()], result: &[] },
     // ---- Source (following) ----
     Command { data_type: SOURCE, name: "receive", kind: K::Create, supported: true, covers: &["Follows.receive"],
-        input: &[Arg::new("sender", B::Link).req(), text("delivery").req(), Arg::new("source", B::Link).req(),
+        input: &[text("sender").req(), text("delivery").req(), Arg::new("source", B::Link).req(),
                  Arg::new("recipient", B::Link).req(), Arg::choice("rights", RIGHTS).many().req(),
                  Arg::choice("passOn", YES_NO), Arg::new("origin", B::Link)],
         result: &[id(SOURCE)] },
     Command { data_type: SOURCE, name: "withdraw", kind: K::Other, supported: true, covers: &["Follows.withdraw"],
-        input: &[Arg::new("sender", B::Link).req(), Arg::new("source", B::Link).req(), text("delivery").req()],
+        input: &[text("sender").req(), Arg::new("source", B::Link).req(), text("delivery").req()],
         result: &[Arg::reference("id", SOURCE)] },
     Command { data_type: SOURCE, name: "remove", kind: K::Delete, supported: true, covers: &["Follows.removeSource"],
         input: &[id(SOURCE)], result: &[] },
@@ -184,16 +182,28 @@ pub static COMMANDS: &[Command] = &[
 
 /// Methods that are no command, and why.
 pub const NOT_COMMANDS: &[(&str, &str)] = &[
-    ("Groups.supportReport", "capability report, answered by the server itself"),
+    (
+        "Groups.supportReport",
+        "capability report, answered by the server itself",
+    ),
     ("Groups.items", "hands out a sub-capability"),
     ("Groups.memberships", "hands out a sub-capability"),
     ("Groups.invitations", "hands out a sub-capability"),
     ("Groups.delegations", "hands out a sub-capability"),
     ("Groups.follows", "hands out a sub-capability"),
-    ("Groups.subscribe", "a stream of changes, not a command on a record; the frontend reads again instead"),
+    (
+        "Groups.subscribe",
+        "a stream of changes, not a command on a record; the frontend reads again instead",
+    ),
     ("Groups.types", "this description itself"),
-    ("Items.addParent", "superseded by requestParent; every provider answers unsupported"),
-    ("GroupDirectory.*", "provider interface towards a directory; fs-groups is its client"),
+    (
+        "Items.addParent",
+        "superseded by requestParent; every provider answers unsupported",
+    ),
+    (
+        "GroupDirectory.*",
+        "provider interface towards a directory; fs-groups is its client",
+    ),
     ("Groups::capabilities", "core: capability report"),
 ];
 

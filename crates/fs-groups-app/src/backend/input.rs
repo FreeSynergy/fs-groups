@@ -11,13 +11,21 @@ use crate::remote::RunError;
 
 /// The first value of `field` that is not empty after trimming.
 pub fn one<'a>(v: &'a Values, field: &str) -> Option<&'a str> {
-    v.get(field)?.iter().map(|s| s.trim()).find(|s| !s.is_empty())
+    v.get(field)?
+        .iter()
+        .map(|s| s.trim())
+        .find(|s| !s.is_empty())
 }
 
 /// All values of `field` that are not empty after trimming.
 pub fn many<'a>(v: &'a Values, field: &str) -> Vec<&'a str> {
     v.get(field)
-        .map(|l| l.iter().map(|s| s.trim()).filter(|s| !s.is_empty()).collect())
+        .map(|l| {
+            l.iter()
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -68,7 +76,10 @@ pub fn right(key: &str, field: &str) -> Result<Right, RunError> {
 
 /// The rights of a list field.
 pub fn rights(v: &Values, field: &str) -> Result<Vec<Right>, RunError> {
-    many(v, field).into_iter().map(|k| right(k, field)).collect()
+    many(v, field)
+        .into_iter()
+        .map(|k| right(k, field))
+        .collect()
 }
 
 /// The key of a wire right.

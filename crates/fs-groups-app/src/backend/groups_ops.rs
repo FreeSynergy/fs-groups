@@ -95,8 +95,14 @@ pub struct GroupChange {
 /// [`RunError::Bad`] for a name that is cleared (a group needs a name), a flow that is no flow, or a field that is
 /// not editable here (`parents` change through the nesting commands).
 pub fn plan_change(edit: &Edit) -> Result<GroupChange, RunError> {
-    let bad = |f: &str| RunError::Bad { field: f.to_owned() };
-    let mut plan = GroupChange { name: None, kind: None, flow: None };
+    let bad = |f: &str| RunError::Bad {
+        field: f.to_owned(),
+    };
+    let mut plan = GroupChange {
+        name: None,
+        kind: None,
+        flow: None,
+    };
     for FieldEdit { path, values, .. } in &edit.fields {
         let first = values.first().cloned();
         match path.as_slice() {
@@ -143,7 +149,11 @@ pub fn change(remote: &GroupsRemote, record: &str, edit: &Edit) -> Result<Outcom
 }
 
 /// `parents`, `children`, `ancestors`, `descendants`: the ids of related groups.
-pub fn related(remote: &GroupsRemote, v: &Values, which: &'static str) -> Result<Outcome, RunError> {
+pub fn related(
+    remote: &GroupsRemote,
+    v: &Values,
+    which: &'static str,
+) -> Result<Outcome, RunError> {
     let id = input::id(v, "id")?;
     let ids = remote.run(move |c| async move {
         macro_rules! ask {
@@ -220,7 +230,11 @@ pub fn parent_requests(remote: &GroupsRemote, v: &Values) -> Result<Vec<Record>,
 }
 
 /// `approve` and `decline` of a request.
-pub fn answer_request(remote: &GroupsRemote, v: &Values, approve: bool) -> Result<Outcome, RunError> {
+pub fn answer_request(
+    remote: &GroupsRemote,
+    v: &Values,
+    approve: bool,
+) -> Result<Outcome, RunError> {
     let id = input::id(v, "id")?;
     remote.run(move |c| async move {
         if approve {

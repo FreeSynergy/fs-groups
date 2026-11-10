@@ -8,7 +8,8 @@
 //! `supported = false` on the wire. A backend refuses them as well ([`unsupported_commands`](super::commands::unsupported_commands)).
 
 use fs_types::{
-    CommandDescription, CommandKind, DescribesType, DescriptionProblem, TypeDescription, TypeRegistry,
+    CommandDescription, CommandKind, DescribesType, DescriptionProblem, TypeDescription,
+    TypeRegistry,
 };
 
 use super::arg::kebab;
@@ -60,10 +61,18 @@ macro_rules! describes {
 }
 
 describes!(Group, GROUP, "AS2 Group");
-describes!(Membership, MEMBERSHIP, "org:Membership (W3C Organization Ontology)");
+describes!(
+    Membership,
+    MEMBERSHIP,
+    "org:Membership (W3C Organization Ontology)"
+);
 describes!(Invitation, INVITATION, "AS2 Invite");
 describes!(Delegation, DELEGATION, "own specification (gap, groups.md)");
-describes!(ParentRequest, PARENT_REQUEST, "own specification (gap, groups.md)");
+describes!(
+    ParentRequest,
+    PARENT_REQUEST,
+    "own specification (gap, groups.md)"
+);
 describes!(Delivery, DELIVERY, "AS2 Invite (offer), own specification");
 describes!(Source, SOURCE, "AS2 Invite (offer), own specification");
 

@@ -1,0 +1,1 @@
+- 2026-11-10 thread R3: type descriptions (table of commands), Groups.types served, window = shell + generated Admin frontend over the socket; see DESIGN.md. Gates run, not tagged.

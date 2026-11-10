@@ -32,12 +32,20 @@ pub fn id_text(r: capnp::Result<uuid::Reader<'_>>) -> Result<String, RunError> {
     Ok(read_uuid(r?).map(|u| u.to_string()).unwrap_or_default())
 }
 
-fn ids(list: capnp::Result<capnp::struct_list::Reader<'_, uuid::Owned>>) -> Result<Vec<String>, RunError> {
-    Ok(list?.iter().filter_map(read_uuid).map(|u| u.to_string()).collect())
+fn ids(
+    list: capnp::Result<capnp::struct_list::Reader<'_, uuid::Owned>>,
+) -> Result<Vec<String>, RunError> {
+    Ok(list?
+        .iter()
+        .filter_map(read_uuid)
+        .map(|u| u.to_string())
+        .collect())
 }
 
 /// The ids of a list of ids.
-pub fn id_list(list: capnp::Result<capnp::struct_list::Reader<'_, uuid::Owned>>) -> Result<Vec<String>, RunError> {
+pub fn id_list(
+    list: capnp::Result<capnp::struct_list::Reader<'_, uuid::Owned>>,
+) -> Result<Vec<String>, RunError> {
     ids(list)
 }
 
@@ -143,10 +151,7 @@ pub fn parent_request(r: parent_request::Reader<'_>) -> Result<Record, RunError>
 fn rights_of(
     list: capnp::Result<capnp::enum_list::Reader<'_, fs_interfaces::groups_capnp::Right>>,
 ) -> Result<Vec<String>, RunError> {
-    list?
-        .iter()
-        .map(|r| Ok(right_key(r?).to_owned()))
-        .collect()
+    list?.iter().map(|r| Ok(right_key(r?).to_owned())).collect()
 }
 
 /// A delivery.

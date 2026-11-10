@@ -18,9 +18,9 @@
     clippy::module_name_repetitions
 )]
 
+pub mod describe;
 mod error;
 pub mod follow_rules;
-pub mod describe;
 pub mod graph;
 mod invitation_state;
 pub mod mirror;
