@@ -15,6 +15,10 @@ What is different here: groups work alone, with no directory server needed. If y
 
 Version `0.0.2` (no tag yet; latest tag `v0.0.1`).
 
+Known: Ctrl+Alt+letter additionally types the letter (Blinc); fixed with fs-blinc-3.2 in the next shared step.
+
+Bekannt: Ctrl+Alt+Buchstabe tippt zusätzlich den Buchstaben (Blinc), behoben mit fs-blinc-3.2 im nächsten gemeinsamen Schritt.
+
 - Create, rename, list and delete groups; nest them; ask a parent to accept a child.
 - Add members with a role; ask "is this person in this group, and through which path?".
 - Invitations with expiry; accepting makes the membership for the invited person only.
