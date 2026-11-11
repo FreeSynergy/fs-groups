@@ -7,9 +7,9 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.1", features = ["rpc"] }
-fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.1" }
-fs-components-workbenches = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.1" }
+fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.18", features = ["rpc"] }
+fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.8" }
+fs-components-workbenches = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.8" }
 capnp = "0.27"
 uuid = "1"
 tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }

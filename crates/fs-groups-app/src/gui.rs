@@ -1,7 +1,8 @@
 //! The window of `fs-groups` (ADR 0063): wiring only.
 //!
-//! Pattern: Facade consumer — connect to the server (starting it if none answers on the user's own
-//! socket), build the workbench, open the window or draw one picture.
+//! Pattern: Facade consumer — connect to the server (the version handshake: a server of another version is
+//! replaced, none is started; a failure is shown in the window, never a black one), build the workbench, open
+//! the window or draw one picture.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -10,16 +11,20 @@ use fs_components_app::{
     AppError, AppWidget, Element, Screen, Surface, WindowOptions, launch, parse_size,
 };
 use fs_components_workbenches::people::{PeopleSource, PeopleWidget};
-use fs_interfaces::rpc::default_socket;
+use fs_interfaces::rpc::{CommandStarter, default_socket, parse_facet};
 
 use crate::words::{TITLE, labels};
 use crate::{GroupsAdapter, GroupsRemote};
+
+/// The one facet of this program.
+pub const FACET: &str = "groups";
 
 /// The help text.
 pub const HELP: &str = "fs-groups: the groups window (without arguments it opens)
 
   --socket <path>    the groups server to talk to (default: $XDG_RUNTIME_DIR/freesynergy/groups.sock);
-                     without it, a server is started if none answers; start it yourself with `fs-groups serve`
+                     a server that is not there, or of another version, is replaced by one of this version
+  --facet <name>     show one facet only: groups (the only one this program has)
   --snapshot <png>   draw a picture instead of opening a window
   --size <WxH>       window or picture size (default 1200x800)";
 
@@ -46,6 +51,7 @@ pub fn app_widget(source: Arc<dyn PeopleSource>) -> Result<AppWidget, AppError> 
 }
 
 struct Args {
+    facet: Option<String>,
     socket: Option<PathBuf>,
     snapshot: Option<PathBuf>,
     size: (u32, u32),
@@ -54,6 +60,7 @@ struct Args {
 
 fn parse(words: &[String]) -> Result<Args, String> {
     let mut out = Args {
+        facet: None,
         socket: None,
         snapshot: None,
         size: (1200, 800),
@@ -69,6 +76,13 @@ fn parse(words: &[String]) -> Result<Args, String> {
         match word.as_str() {
             "--socket" => out.socket = Some(PathBuf::from(value("--socket")?)),
             "--snapshot" => out.snapshot = Some(PathBuf::from(value("--snapshot")?)),
+            "--facet" => {
+                let name = parse_facet(&value("--facet")?)?;
+                if name != FACET {
+                    return Err(format!("unknown facet {name}; this program has: {FACET}"));
+                }
+                out.facet = Some(name);
+            }
             "--size" => out.size = parse_size(&value("--size")?)?,
             "-h" | "--help" => out.help = true,
             other => return Err(format!("unknown option {other}")),
@@ -92,7 +106,8 @@ pub fn run(words: &[String]) -> Result<(), String> {
         .clone()
         .or_else(|| default_socket("groups"))
         .ok_or("no socket: give --socket or set XDG_RUNTIME_DIR")?;
-    let remote = connect_or_start(&socket, args.socket.is_none())?;
+    let remote =
+        GroupsRemote::matching(&socket, Arc::new(starter(&socket, args.socket.is_some())?));
     let adapter = GroupsAdapter::new(Arc::new(remote));
     let app = app_widget(Arc::new(adapter)).map_err(|e| e.to_string())?;
     let (width, height) = args.size;
@@ -108,31 +123,14 @@ pub fn run(words: &[String]) -> Result<(), String> {
     launch(options, app).map_err(|e| e.to_string())
 }
 
-/// Connect; if none answers on the user's own socket, start `fs-groups serve` (detached, so other
-/// windows use it too) and wait for it. A socket given with `--socket` is never answered by starting
-/// anything.
-fn connect_or_start(socket: &Path, may_start: bool) -> Result<GroupsRemote, String> {
-    let first = GroupsRemote::connect(socket);
-    if first.is_ok() || !may_start {
-        return first;
-    }
+/// How this window starts the server when none fits: `fs-groups serve` (detached by `CommandStarter`, so other
+/// windows use it too), on the socket this window talks to. What it says when it cannot start it says on its own
+/// stderr, which a detached server has not: the person sees the handshake error instead.
+fn starter(socket: &Path, own_socket: bool) -> Result<CommandStarter, String> {
     let me = std::env::current_exe().map_err(|e| e.to_string())?;
-    let mut server = std::process::Command::new(me);
-    server
-        .arg("serve")
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null());
-    #[cfg(unix)]
-    std::os::unix::process::CommandExt::process_group(&mut server, 0);
-    server
-        .spawn()
-        .map_err(|e| format!("could not start the groups server: {e}"))?;
-    for _ in 0..50 {
-        std::thread::sleep(std::time::Duration::from_millis(100));
-        if let Ok(remote) = GroupsRemote::connect(socket) {
-            return Ok(remote);
-        }
+    let mut words: Vec<std::ffi::OsString> = vec!["serve".into()];
+    if own_socket {
+        words.extend(["--socket".into(), socket.as_os_str().to_owned()]);
     }
-    first
+    Ok(CommandStarter::new(me, words))
 }

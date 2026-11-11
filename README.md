@@ -13,7 +13,7 @@ What is different here: groups work alone, with no directory server needed. If y
 
 ## What it can do today
 
-Latest tag: `v0.0.1`.
+Version `0.0.2` (no tag yet; latest tag `v0.0.1`).
 
 - Create, rename, list and delete groups; nest them; ask a parent to accept a child.
 - Add members with a role; ask "is this person in this group, and through which path?".
@@ -24,7 +24,7 @@ Latest tag: `v0.0.1`.
 
 ## What is not there yet
 
-- No window, no server, and no live change feed.
+- The window is small (list, read, create, rename, kind, delete); the server has no live change feed.
 - Delegated rights only answer questions. Nothing else enforces them yet.
 - No authentication yet.
 - Several rules are provisional while the owner decides them: what "up" and "down" mean for rights between a group and its parent, and who must agree to a nesting link.

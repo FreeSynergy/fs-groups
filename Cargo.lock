@@ -172,15 +172,15 @@ dependencies = [
  "objc2-foundation 0.3.2",
  "parking_lot",
  "percent-encoding",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
  "x11rb",
 ]
 
 [[package]]
 name = "arc-swap"
-version = "1.9.4"
+version = "1.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db4c94f57a570fce5d381be3289b3f79aef6332d72948fe82ab5772e423ccf92"
+checksum = "84a22b5d51209f6de83d37a0b33d320acb8da88823e42a94c075140708f032a5"
 dependencies = [
  "rustversion",
 ]
@@ -246,7 +246,7 @@ checksum = "82f6aeea286b8eb4dd3431a1be1b59d290ace00f5bfd8e2a159bc2a05e2c1667"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -348,8 +348,7 @@ dependencies = [
 [[package]]
 name = "blinc_animation"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "914cb7041df72dede97cc2ce68aa91120f6fc6c7cd94c2c62445a0f3fa7c9b94"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_core",
  "slotmap",
@@ -363,8 +362,7 @@ dependencies = [
 [[package]]
 name = "blinc_app"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a93e66de48698f9617edb86cae2e6181b3ed5d62122e765f405690ba70c9f36"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "anyhow",
  "blinc_animation",
@@ -396,8 +394,7 @@ dependencies = [
 [[package]]
 name = "blinc_cn"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d156b9835f15c8268bb65a365cadef648191daff9aa5aa894bb685e0b837165a"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_animation",
  "blinc_core",
@@ -416,8 +413,7 @@ dependencies = [
 [[package]]
 name = "blinc_core"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1eff47e8ffb9bc534a06ea9912d3162b34d74292baa73e62617a451b219fcb93"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "rustc-hash 2.1.3",
  "serde",
@@ -430,8 +426,7 @@ dependencies = [
 [[package]]
 name = "blinc_css"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cd8b0d95ef77c6886b75c9463a4de3c800c01177a9d2d1756dda8287e6e8fc5"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_animation",
  "blinc_core",
@@ -444,8 +439,7 @@ dependencies = [
 [[package]]
 name = "blinc_flow"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88a532a6c0cec0acb8076fa6462078876cfab2f0706acb39877542f0f5387bb0"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_core",
  "nom",
@@ -454,8 +448,7 @@ dependencies = [
 [[package]]
 name = "blinc_gpu"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f97564a099f9a5f74c103e08fcb63d61d58362b1b09ecfd4fb8b81fd24272354"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_core",
  "blinc_flow",
@@ -468,6 +461,7 @@ dependencies = [
  "naga",
  "pollster",
  "raw-window-handle",
+ "russl",
  "slotmap",
  "smallvec",
  "tbc",
@@ -483,8 +477,7 @@ dependencies = [
 [[package]]
 name = "blinc_icons"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b0be67ac9d6d0d2be752cbcef2593d7ead5f52ed52604ca112171212546690d"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "roxmltree",
  "walkdir",
@@ -493,8 +486,7 @@ dependencies = [
 [[package]]
 name = "blinc_image"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40901e1923b75ebee7fb5d1656a20562142ea75496bb21173367724f20ac209e"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "base64",
  "blinc_platform",
@@ -507,8 +499,7 @@ dependencies = [
 [[package]]
 name = "blinc_layout"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab5b1b6d2419f33e4bbefee10d5e02819923a4df5977760c5ca45b855039e4d2"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "arboard",
  "blinc_animation",
@@ -535,11 +526,11 @@ dependencies = [
 [[package]]
 name = "blinc_macros"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea69be63e5fa18727d1ef6f043f2469a5b638025f65f78d609d1bab404569914"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_core",
  "blinc_flow",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -548,8 +539,7 @@ dependencies = [
 [[package]]
 name = "blinc_noto_emoji"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f92783fbe9c344c45f4238a16eae32fdac3e2afa5c92888bc67cdcdebb478f07"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_text",
  "tracing",
@@ -558,8 +548,7 @@ dependencies = [
 [[package]]
 name = "blinc_paint"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bed7d63fab5375681e551e9ec4e341658c07ab88b6348b18faeb087c791da124"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_core",
  "bytemuck",
@@ -570,8 +559,7 @@ dependencies = [
 [[package]]
 name = "blinc_platform"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f26ccfce95a26e7fecf7ed94507df4de2784464041b77d56ab8ac030c4c401f"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "thiserror 2.0.21",
 ]
@@ -579,12 +567,9 @@ dependencies = [
 [[package]]
 name = "blinc_platform_desktop"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6e34f5932356276c96399ad9ad2556b33b08d5d287e95a2e0ae7c9f829b8024"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_platform",
- "objc2 0.6.5",
- "objc2-foundation 0.3.2",
  "raw-window-handle",
  "tracing",
  "windows",
@@ -594,8 +579,7 @@ dependencies = [
 [[package]]
 name = "blinc_router"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33c6520cd026a3552cbc6895400ec7090d9916873ed0b3bdda175bfc6007ecc7"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_animation",
  "blinc_core",
@@ -608,8 +592,7 @@ dependencies = [
 [[package]]
 name = "blinc_svg"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1115db1557c60c9e00866b023a9276b85c248ebdc644054b566e546f92aaf04"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_core",
  "resvg",
@@ -621,17 +604,18 @@ dependencies = [
 [[package]]
 name = "blinc_text"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d0b13e2862220a2ea998f90ac85a2b47f9b880e1fdef66da4119f57afb61c19"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_core",
  "fontdb",
  "html-escape",
  "lru",
+ "memmap2",
  "rustc-hash 2.1.3",
  "rustybuzz 0.20.1",
  "swash",
  "thiserror 2.0.21",
+ "tiny-skia",
  "tracing",
  "ttf-parser 0.25.1",
  "unicode-bidi",
@@ -641,8 +625,7 @@ dependencies = [
 [[package]]
 name = "blinc_theme"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "705c6c74cd83b79b8cb66c6dff16130bd6f58fa82b18754ded16900e3bbd11cc"
+source = "git+https://github.com/FreeSynergy/Blinc?tag=fs-blinc-3#8a0251b2105a070626ad8390cd14d7ef7483c0f5"
 dependencies = [
  "blinc_animation",
  "blinc_core",
@@ -678,15 +661,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "block2"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdeb9d870516001442e364c5220d3574d2da8dc765554b4a617230d33fa58ef5"
-dependencies = [
- "objc2 0.6.5",
-]
-
-[[package]]
 name = "branches"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -718,7 +692,7 @@ checksum = "6a1f896587b6f2c069c73d2f0913e2d590c3990285cd2f0b6aa02b786b4c679c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -805,9 +779,9 @@ dependencies = [
 
 [[package]]
 name = "capnp-rpc"
-version = "0.27.3"
+version = "0.27.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "629b0af76bb3b4073694783338d1844d993b13848d9b8618f67e2ed39870b4ca"
+checksum = "78cc13745b71c62d9756537969000a394d559a55794e123f5fb955813d748d44"
 dependencies = [
  "capnp",
  "capnp-futures",
@@ -926,7 +900,7 @@ checksum = "fe6d2e5af09e8c8ad56c969f2157a3d4238cebc7c55f0a517728c38f7b200f81"
 dependencies = [
  "serde",
  "termcolor",
- "unicode-width 0.1.14",
+ "unicode-width 0.2.3",
 ]
 
 [[package]]
@@ -956,9 +930,9 @@ dependencies = [
 
 [[package]]
 name = "const-oid"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
+checksum = "be95d4a884358a21a199689323c29e9256b4a1b315e22f183d155422041d3a9a"
 
 [[package]]
 name = "core-foundation"
@@ -1059,9 +1033,9 @@ dependencies = [
 
 [[package]]
 name = "crc32fast"
-version = "1.5.4"
+version = "1.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f97d3416d5337d15c4b0d78c8c91df922ca143f57ec20e2d1c188333047ef04"
+checksum = "2b929dd2a135771f40afabd1073f85eed59c800b7c61901e5c254270497dad64"
 dependencies = [
  "cfg-if",
 ]
@@ -1178,7 +1152,7 @@ checksum = "c6232dd377dcc64799954cbd3a9bb882e9cdc1308ccd87b1c098f1fb2eaf82a8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -1391,7 +1365,7 @@ checksum = "ea5190182e6915eb873ddbc16e23b711b6eb1f9c00a0d0a3a91b5f6228475225"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -1402,8 +1376,8 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 
 [[package]]
 name = "fs-components-app"
-version = "0.0.1"
-source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
+version = "0.0.8"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.8#be06cf094a008781505b9113b740f0033ed4a312"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1416,20 +1390,20 @@ dependencies = [
 
 [[package]]
 name = "fs-components-primitives"
-version = "0.0.1"
-source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
+version = "0.0.8"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.8#be06cf094a008781505b9113b740f0033ed4a312"
 dependencies = [
  "blinc_cn",
  "blinc_core",
  "blinc_layout",
  "blinc_theme",
- "fs-interfaces 0.52.0",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18)",
 ]
 
 [[package]]
 name = "fs-components-render"
-version = "0.0.1"
-source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
+version = "0.0.8"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.8#be06cf094a008781505b9113b740f0033ed4a312"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1443,8 +1417,8 @@ dependencies = [
 
 [[package]]
 name = "fs-components-widgets"
-version = "0.0.1"
-source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
+version = "0.0.8"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.8#be06cf094a008781505b9113b740f0033ed4a312"
 dependencies = [
  "blinc_cn",
  "blinc_core",
@@ -1459,8 +1433,8 @@ dependencies = [
 
 [[package]]
 name = "fs-components-workbenches"
-version = "0.0.1"
-source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
+version = "0.0.8"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.8#be06cf094a008781505b9113b740f0033ed4a312"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1474,12 +1448,12 @@ dependencies = [
 
 [[package]]
 name = "fs-groups"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "capnp",
  "fs-groups-app",
  "fs-groups-server",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18)",
  "tempfile",
  "tokio",
  "uuid",
@@ -1487,14 +1461,14 @@ dependencies = [
 
 [[package]]
 name = "fs-groups-app"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "capnp",
  "fs-components-app",
  "fs-components-workbenches",
  "fs-groups-core",
  "fs-groups-server",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18)",
  "fs-objects",
  "tempfile",
  "tokio",
@@ -1503,11 +1477,11 @@ dependencies = [
 
 [[package]]
 name = "fs-groups-core"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "chrono",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18)",
  "fs-objects",
  "icu_properties",
  "serde_json",
@@ -1518,7 +1492,7 @@ dependencies = [
 
 [[package]]
 name = "fs-groups-people"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "fs-groups-core",
@@ -1530,14 +1504,14 @@ dependencies = [
 
 [[package]]
 name = "fs-groups-server"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "capnp",
  "capnp-rpc",
  "chrono",
  "fs-groups-core",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18)",
  "fs-objects",
  "tempfile",
  "tokio",
@@ -1547,7 +1521,16 @@ dependencies = [
 [[package]]
 name = "fs-interfaces"
 version = "0.0.1"
-source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.1#9f2d3a0626d7382b478c754eb31834146188dfab"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.14#3f93a1a8531676fb243e09cb36a5537981c8ebf3"
+dependencies = [
+ "capnp",
+ "idna",
+]
+
+[[package]]
+name = "fs-interfaces"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.18#5fa4a8f012c1e2532dc9ca78273705d1e2bae8c5"
 dependencies = [
  "capnp",
  "capnp-rpc",
@@ -1559,15 +1542,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "uuid",
-]
-
-[[package]]
-name = "fs-interfaces"
-version = "0.52.0"
-source = "git+https://github.com/FreeSynergy/fs-interfaces?rev=9a288a6#9a288a6e7a1e5400cacca1a893fcc5c519bfe3b2"
-dependencies = [
- "capnp",
- "idna",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1590,18 +1565,33 @@ dependencies = [
 
 [[package]]
 name = "fs-people-core"
-version = "0.0.1"
-source = "git+https://github.com/FreeSynergy/fs-people?tag=v0.0.1#f75ec88ca3bfe757a626277e791c626ffdf85404"
+version = "0.0.12"
+source = "git+https://github.com/FreeSynergy/fs-people?tag=v0.0.12#f376143c6fca0188284f031daa9543392b983d27"
 dependencies = [
  "async-trait",
  "calcard",
  "chrono",
- "fs-interfaces 0.0.1",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.14)",
  "fs-objects",
+ "fs-types",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
  "tokio",
+]
+
+[[package]]
+name = "fs-types"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.14#3f93a1a8531676fb243e09cb36a5537981c8ebf3"
+dependencies = [
+ "capnp",
+ "chrono",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.14)",
+ "geo-uri",
+ "iri-string",
+ "oxilangtag",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -1666,7 +1656,7 @@ checksum = "9fb9654ba8355388abeb8dcb4fc62f511300867002afc858860463bdd9fe0c44"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -1735,6 +1725,15 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
+]
+
+[[package]]
+name = "geo-uri"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "951577f365723b622bfa73389a8def7393d56c28a3fc9aff3de17fae98fc868c"
+dependencies = [
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -2269,13 +2268,23 @@ dependencies = [
 
 [[package]]
 name = "io-uring"
-version = "0.7.15"
+version = "0.7.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed3bd0ecfbb87805f538bb7b32e5239ca0763890c623e349860ecba69469f2bb"
+checksum = "878c26bc5e45fe089ce2ca25689260c152a87ce1d7de2ca86101efeea6973932"
 dependencies = [
  "bitflags 2.13.2",
  "cfg-if",
  "libc",
+]
+
+[[package]]
+name = "iri-string"
+version = "0.7.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1663ee7d8cf2900cc1414b1e1eec9f348d6eaa3bcab07579f4726a4b8499f447"
+dependencies = [
+ "memchr",
+ "serde",
 ]
 
 [[package]]
@@ -2308,18 +2317,18 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+checksum = "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
 dependencies = [
  "either",
 ]
 
 [[package]]
 name = "itoa"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+checksum = "3bd1574e617a9a6c1f8f8181bd7e841e1f20e4277607ef28945765188d6284d4"
 
 [[package]]
 name = "jmap-tools"
@@ -2487,22 +2496,22 @@ dependencies = [
 
 [[package]]
 name = "linkme"
-version = "0.3.37"
+version = "0.3.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3045e122bd98aef8ec3ad58ce84f0791f64e70163d1a02710af4aa11a4d54cc5"
+checksum = "10a4e12fd3f6b22d5bc28beccac0f53bb35db4a897c6ddb709c4a0161f72eb6e"
 dependencies = [
  "linkme-impl",
 ]
 
 [[package]]
 name = "linkme-impl"
-version = "0.3.37"
+version = "0.3.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77060ebe535362c3da75682cd17b0431017b6e7c5661e714fc69a7ad017d1301"
+checksum = "22cd04c256b1cd686a45898c8fd150c79b801d96a3eb7bae1075f9eb3b4b85c1"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -2546,9 +2555,9 @@ checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 
 [[package]]
 name = "loom"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "419e0dc8046cb947daa77eb95ae174acfbddb7673b4151f56d1eed8e93fbfaca"
+checksum = "f1611ddbf89dc6ae42cfbd51fc207836140130257646eab8d6d2fb16577db2d2"
 dependencies = [
  "cfg-if",
  "generator",
@@ -2932,7 +2941,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4e89ad9e3d7d297152b17d39ed92cd50ca8063a89a9fa569046d41568891eff"
 dependencies = [
  "bitflags 2.13.2",
- "block2 0.5.1",
+ "block2",
  "libc",
  "objc2 0.5.3",
  "objc2-core-data",
@@ -2960,7 +2969,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74dd3b56391c7a0596a295029734d3c1c5e7e510a4cb30245f8221ccea96b009"
 dependencies = [
  "bitflags 2.13.2",
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-core-location",
  "objc2-foundation 0.2.2",
@@ -2972,7 +2981,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5ff520e9c33812fd374d8deecef01d4a840e7b41862d849513de77e44aa4889"
 dependencies = [
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-foundation 0.2.2",
 ]
@@ -2984,7 +2993,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "617fbf49e071c178c0b24c080767db52958f716d9eabdf0890523aeae54773ef"
 dependencies = [
  "bitflags 2.13.2",
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-foundation 0.2.2",
 ]
@@ -3019,7 +3028,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55260963a527c99f1819c4f8e3b47fe04f9650694ef348ffd2227e8196d34c80"
 dependencies = [
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-foundation 0.2.2",
  "objc2-metal",
@@ -3031,7 +3040,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "000cfee34e683244f284252ee206a27953279d370e309649dc3ee317b37e5781"
 dependencies = [
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-contacts",
  "objc2-foundation 0.2.2",
@@ -3050,7 +3059,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ee638a5da3799329310ad4cfa62fbf045d5f56e3ef5ba4149e7452dcf89d5a8"
 dependencies = [
  "bitflags 2.13.2",
- "block2 0.5.1",
+ "block2",
  "dispatch",
  "libc",
  "objc2 0.5.3",
@@ -3063,8 +3072,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3e0adef53c21f888deb4fa59fc59f7eb17404926ee8a6f59f5df0fd7f9f3272"
 dependencies = [
  "bitflags 2.13.2",
- "block2 0.6.2",
- "libc",
  "objc2 0.6.5",
  "objc2-core-foundation",
 ]
@@ -3086,7 +3093,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1a1ae721c5e35be65f01a03b6d2ac13a54cb4fa70d8a5da293d7b0020261398"
 dependencies = [
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-app-kit 0.2.2",
  "objc2-foundation 0.2.2",
@@ -3099,7 +3106,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd0cba1276f6023976a406a14ffa85e1fdd19df6b0f737b063b95f6c8c7aadd6"
 dependencies = [
  "bitflags 2.13.2",
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-foundation 0.2.2",
 ]
@@ -3111,7 +3118,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e42bee7bff906b14b167da2bac5efe6b6a07e6f7c0a21a7308d40c960242dc7a"
 dependencies = [
  "bitflags 2.13.2",
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-foundation 0.2.2",
  "objc2-metal",
@@ -3134,7 +3141,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8bb46798b20cd6b91cbd113524c490f1686f4c4e8f49502431415f3512e2b6f"
 dependencies = [
  "bitflags 2.13.2",
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-cloud-kit",
  "objc2-core-data",
@@ -3154,7 +3161,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "44fa5f9748dbfe1ca6c0b79ad20725a11eca7c2218bceb4b005cb1be26273bfe"
 dependencies = [
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-foundation 0.2.2",
 ]
@@ -3166,7 +3173,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76cfcbf642358e8689af64cee815d139339f3ed8ad05103ed5eaf73db8d84cb3"
 dependencies = [
  "bitflags 2.13.2",
- "block2 0.5.1",
+ "block2",
  "objc2 0.5.3",
  "objc2-core-location",
  "objc2-foundation 0.2.2",
@@ -3227,6 +3234,15 @@ name = "owo-colors"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
+
+[[package]]
+name = "oxilangtag"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d3b4eb570abd4a1dcb062c31fd37b832264d9dc7292c3e69acfe926c87b063f"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "pack1"
@@ -3481,9 +3497,9 @@ checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
 
 [[package]]
 name = "prost"
-version = "0.14.4"
+version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "528ac67416ff8646872a3c02cad9cc4ee5dc9f9540c9b10771855c95cb2e5ae1"
+checksum = "c9f016da56b311cff4659f5e7335c4d5fda5ca86cae4f48b8ce1cf3335246a7d"
 dependencies = [
  "bytes",
  "prost-derive",
@@ -3491,12 +3507,12 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.14.4"
+version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
+checksum = "c9a367f131d93b3395fc6207c11e67098493ab040def4ce3085adbf186687f7e"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.15.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -3787,6 +3803,51 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c20b6793b5c2fa6553b250154b78d6d0db37e72700ae35fad9387a46f487c97"
 
 [[package]]
+name = "russl"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1fb265319e3855c71a817482682b5182ad17d91f81c8a7ff1fa056757cc5ee1"
+dependencies = [
+ "russl_macros",
+]
+
+[[package]]
+name = "russl_compiler"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a616e0cf94087dd98709e96e44357945a05a1d74de633a2d6557c8939e5a077b"
+dependencies = [
+ "half",
+ "naga",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "russl_expand"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45f26edb26abca6d046ca776361d1068fa55ca4608ce13ac74667ce3e6f0afab"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "russl_compiler",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "russl_macros"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31a83bec826f84cd0cd1f21100bb4df4c719b7bb3c67058ecf21ce5d9d63f6c0"
+dependencies = [
+ "quote",
+ "russl_compiler",
+ "russl_expand",
+]
+
+[[package]]
 name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3958,7 +4019,7 @@ checksum = "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -4280,9 +4341,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "3.0.9"
+version = "3.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d78c8dee4c7bf0e14673097256fed6142ce9d3b85a408189d07482442145823b"
+checksum = "4ae9ccbea3a7b0b09443036490c8f34a8b1b760fd345e5c0dae0aac718faea79"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4297,7 +4358,7 @@ checksum = "901704edd0dfe137f1987838ee4f259e4e063c31371bdb423f7ae38ec6f77f02"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -4383,7 +4444,7 @@ checksum = "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -4493,7 +4554,7 @@ checksum = "78773a2a397f451582ce068015985c33193cf6dea8b74d2a639fe457b2f07b0e"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]
@@ -5048,9 +5109,9 @@ checksum = "3a3b425286980a367278453f3b6d28cdcb134b574e5a35824a6ff5eebad50bb6"
 
 [[package]]
 name = "uuid"
-version = "1.29.1"
+version = "1.29.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a06f08a856b009bc7bbaf7d3e79808595d032dd19074c0c2ef26e49e03e6bdc"
+checksum = "bed99139f7dac9b5cfe5f17be4d66dc7079a34dee1d74bcc77217119240e267c"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -5138,7 +5199,7 @@ dependencies = [
  "bumpalo",
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
  "wasm-bindgen-shared",
 ]
 
@@ -5453,7 +5514,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5739,7 +5800,7 @@ dependencies = [
  "android-activity",
  "atomic-waker",
  "bitflags 2.13.2",
- "block2 0.5.1",
+ "block2",
  "bytemuck",
  "calloop",
  "cfg_aliases",
@@ -5920,7 +5981,7 @@ checksum = "ec8ebde2db3681e8c9980cc27822030e68752690ddfa9473e739aeb4dbde6d71"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
  "synstructure",
 ]
 
@@ -5967,7 +6028,7 @@ checksum = "f75b4683f6c7f45248d4d64056a24298c6281e0993356d7d1b4a1a962ef10d4a"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
  "synstructure",
 ]
 
@@ -6003,7 +6064,7 @@ checksum = "c3743ddbf47738d929cd1ae2e199d40d0162979dfe31aef8ae646d2bf00bf97a"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
 ]
 
 [[package]]

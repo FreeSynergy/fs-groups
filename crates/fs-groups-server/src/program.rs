@@ -8,13 +8,13 @@ use std::ffi::OsString;
 use std::sync::Arc;
 
 use fs_groups_core::GroupRepo;
-use fs_interfaces::rpc::{ServerOptions, prepare_data_dir, run_until_signal};
+use fs_interfaces::rpc::{ServerIdentity, ServerOptions, prepare_data_dir, run_until_signal_as};
 use fs_objects::{Store, TursoStore};
 
 use crate::{GroupsServer, OperatorIsHuman};
 
 /// The help text of `fs-groups serve`.
-pub const HELP: &str = "fs-groups serve [--socket PATH] [--data DIR] [--actor IRI] [--instance DOMAIN]\nDefaults: $XDG_RUNTIME_DIR/freesynergy/groups.sock, $XDG_DATA_HOME/freesynergy/groups, the local owner";
+pub const HELP: &str = "fs-groups serve [--socket PATH] [--data DIR] [--actor IRI] [--instance DOMAIN] [--facet groups]\nDefaults: $XDG_RUNTIME_DIR/freesynergy/groups.sock, $XDG_DATA_HOME/freesynergy/groups, the local owner";
 
 /// Why `serve` ended without serving.
 #[derive(Debug, PartialEq, Eq)]
@@ -34,7 +34,17 @@ pub fn serve(args: impl IntoIterator<Item = OsString>) -> Result<(), ServeError>
         println!("{HELP}");
         return Ok(());
     };
-    run_until_signal(&options.socket, || async {
+    // The one facet of this program is `groups`; a name it does not have is refused, so a wrong link is found at the start.
+    if let Some(facet) = &options.facet
+        && facet != "groups"
+    {
+        return Err(ServeError::Usage(format!(
+            "unknown facet {facet}; this program has: groups"
+        )));
+    }
+    // Name and version go to `Control.version`: a window of another version replaces this server (fs-interfaces handshake).
+    let identity = ServerIdentity::new("fs-groups", env!("CARGO_PKG_VERSION"));
+    run_until_signal_as(&options.socket, identity, || async {
         prepare_data_dir(&options.data)?;
         let store = TursoStore::open(options.data.join("objects.db"))
             .await

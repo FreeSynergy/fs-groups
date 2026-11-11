@@ -9,4 +9,4 @@ mod model;
 mod proxy;
 
 pub use model::{ApiError, Group, GroupsApi, Member};
-pub use proxy::GroupsRemote;
+pub use proxy::{GroupsRemote, Limits};
