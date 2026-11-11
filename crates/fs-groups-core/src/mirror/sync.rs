@@ -177,10 +177,10 @@ pub trait Mirror: Send + Sync {
         report.unreadable.sort();
         report.unreadable.dedup();
         ledger.retain(|id| !removed.contains(id) && !gone.contains(id));
-        if ledger != written {
-            if let Err(e) = self.remember(&name, &ledger).await {
-                report.ledger_error = Some(e.to_string());
-            }
+        if ledger != written
+            && let Err(e) = self.remember(&name, &ledger).await
+        {
+            report.ledger_error = Some(e.to_string());
         }
         Ok(report)
     }

@@ -22,13 +22,13 @@ impl GroupRepo {
         let mut out = vec![];
         for (node, path) in nodes {
             for m in self.direct(node).await? {
-                if let Member::Person(p) = m.member {
-                    if seen.insert(p.clone()) {
-                        out.push(EffectiveMember {
-                            person: p,
-                            via: path.clone(),
-                        });
-                    }
+                if let Member::Person(p) = m.member
+                    && seen.insert(p.clone())
+                {
+                    out.push(EffectiveMember {
+                        person: p,
+                        via: path.clone(),
+                    });
                 }
             }
         }

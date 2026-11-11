@@ -95,12 +95,12 @@ async fn corrupt(store: &Arc<dyn Store>, rng: &mut Lcg, groups: &[Group], repo: 
             store.put(o, ME).await.unwrap();
         }
         _ => {
-            if let Ok(ds) = repo.delegations(g.id).await {
-                if let Some(d) = ds.first() {
-                    let mut o = store.get(d.id).await.unwrap().unwrap();
-                    o.index.remove("right");
-                    store.put(o, ME).await.unwrap();
-                }
+            if let Ok(ds) = repo.delegations(g.id).await
+                && let Some(d) = ds.first()
+            {
+                let mut o = store.get(d.id).await.unwrap().unwrap();
+                o.index.remove("right");
+                store.put(o, ME).await.unwrap();
             }
         }
     }
@@ -126,10 +126,10 @@ async fn churn(
         let p = &people[rng.next(people.len())];
         if rng.chance(40) {
             let _ = repo.add(g.id, Member::Person(p.clone()), "").await;
-        } else if rng.chance(30) {
-            if let Some(m) = repo.direct(g.id).await.unwrap().first() {
-                repo.remove(m.id).await.unwrap();
-            }
+        } else if rng.chance(30)
+            && let Some(m) = repo.direct(g.id).await.unwrap().first()
+        {
+            repo.remove(m.id).await.unwrap();
         }
     }
 }
