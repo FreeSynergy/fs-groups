@@ -35,6 +35,8 @@ pub enum ApiError {
     Unsupported(String),
     /// The server refused or failed; the text is its own.
     Failed(String),
+    /// The connection to the server is lost (it went away); the next call connects anew.
+    Lost(String),
 }
 
 /// What the window asks of the groups program.

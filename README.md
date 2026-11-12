@@ -13,7 +13,7 @@ What is different here: groups work alone, with no directory server needed. If y
 
 ## What it can do today
 
-Version `0.0.2` (no tag yet; latest tag `v0.0.1`).
+Version `0.0.3` (no tag yet; latest tag `v0.0.1`).
 
 - Create, rename, list and delete groups; nest them; ask a parent to accept a child.
 - Add members with a role; ask "is this person in this group, and through which path?".

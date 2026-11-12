@@ -112,7 +112,31 @@ impl Dial {
 /// The state of the connection: a worker that answers, or why there is none.
 enum Link {
     Up(tokio::sync::mpsc::UnboundedSender<Job>),
-    Down(String),
+    Down(Down),
+}
+
+/// Why there is no connection: the first reason (kept, it is often the telling one, for example the version that
+/// runs) and the one of the last try.
+struct Down {
+    first: String,
+    last: String,
+}
+
+impl Down {
+    fn new(reason: String) -> Self {
+        Self {
+            first: reason.clone(),
+            last: reason,
+        }
+    }
+
+    fn text(&self) -> String {
+        if self.first == self.last {
+            self.first.clone()
+        } else {
+            format!("{} (last try: {})", self.first, self.last)
+        }
+    }
 }
 
 /// The groups server on a socket.
@@ -161,12 +185,12 @@ impl GroupsRemote {
     ) -> Self {
         let dial = Dial::Matching {
             socket: socket.to_path_buf(),
-            expected: Expected::new(env!("CARGO_PKG_VERSION")),
+            expected: Expected::new(env!("CARGO_PKG_VERSION")).with_program("fs-groups"),
             starter,
         };
         let link = match dial.open(limits) {
             Ok(jobs) => Link::Up(jobs),
-            Err(e) => Link::Down(e),
+            Err(e) => Link::Down(Down::new(e)),
         };
         Self {
             dial,
@@ -188,10 +212,27 @@ impl GroupsRemote {
                 Ok(())
             }
             Err(e) => {
-                *link = Link::Down(e.clone());
-                Err(e)
+                let down = match &*link {
+                    Link::Down(prev) => Down {
+                        first: prev.first.clone(),
+                        last: e,
+                    },
+                    Link::Up(_) => Down::new(e),
+                };
+                let text = down.text();
+                *link = Link::Down(down);
+                Err(text)
             }
         }
+    }
+
+    /// A lost connection is remembered: the next call connects anew (the version handshake again).
+    fn note_lost<T>(&self, done: Result<T, ApiError>) -> Result<T, ApiError> {
+        if let Err(ApiError::Lost(reason)) = &done {
+            *self.link.lock().unwrap_or_else(PoisonError::into_inner) =
+                Link::Down(Down::new(reason.clone()));
+        }
+        done
     }
 
     pub(super) fn run<T, F, Fut>(&self, make: F) -> Result<T, ApiError>
@@ -210,7 +251,7 @@ impl GroupsRemote {
         }
         let jobs = match &*self.link.lock().unwrap_or_else(PoisonError::into_inner) {
             Link::Up(jobs) => jobs.clone(),
-            Link::Down(e) => return Err(ApiError::Failed(e.clone())),
+            Link::Down(d) => return Err(ApiError::Failed(d.text())),
         };
         let (reply, answer) = mpsc::channel();
         let job: Job = Box::new(move |clients| {
@@ -224,7 +265,7 @@ impl GroupsRemote {
         jobs.send(job).map_err(|_| gone())?;
         // The job ends itself at `limit`; this is the belt for a worker that does not run it at all.
         match answer.recv_timeout(limit + GRACE) {
-            Ok(done) => done,
+            Ok(done) => self.note_lost(done),
             Err(mpsc::RecvTimeoutError::Timeout) => Err(timed_out(&Fault::TimedOut {
                 server: SERVER,
                 limit,

@@ -35,7 +35,7 @@ fn reason(error: ApiError) -> SourceError {
     match error {
         ApiError::NotFound(m) => SourceError::not_found(m),
         ApiError::Unsupported(m) => SourceError::unsupported(m),
-        ApiError::Failed(m) => SourceError::failed(m),
+        ApiError::Failed(m) | ApiError::Lost(m) => SourceError::failed(m),
     }
 }
 

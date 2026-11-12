@@ -28,11 +28,11 @@ jobs:
       - uses: FreeSynergy/fs-release/actions/setup-rust@main
         with:
           cache-key: typing-test
-      - name: Build the window (release)
-        run: cargo build --release --locked -p fs-groups
+      - name: Build the window (debug, with the read-only text access of the test: the feature is refused in a release build)
+        run: cargo build --locked -p fs-groups --features test-access
       - uses: FreeSynergy/fs-release/actions/typing-test@main
         with:
-          app-binary: target/release/fs-groups
+          app-binary: target/debug/fs-groups
           app-args: "--size 1000x640"
           scenario: .github/typing-test/focus.sh
           name: fs-groups

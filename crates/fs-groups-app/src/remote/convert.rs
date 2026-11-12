@@ -3,12 +3,16 @@
 //! Pattern: Adapter — turns Cap'n Proto readers and problems into the window's own types.
 
 use fs_interfaces::groups_capnp::group;
+use fs_interfaces::rpc::client::connection_lost;
 use fs_interfaces::rpc::{Problem, read_envelope, read_uuid};
 use uuid::Uuid;
 
 use super::model::{ApiError, Group};
 
 pub(super) fn problem(error: &capnp::Error) -> ApiError {
+    if connection_lost(error) {
+        return ApiError::Lost(format!("the groups server went away: {error}"));
+    }
     match Problem::from_error(error) {
         Some(p) if p.is_unsupported() => ApiError::Unsupported(p.detail),
         Some(p) if p.status == 404 => ApiError::NotFound(p.detail),
