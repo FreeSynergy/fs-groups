@@ -1,4 +1,6 @@
 //! The worker thread that owns the connection, and how the connection is made.
+//!
+//! Pattern: Proxy — the worker thread behind `GroupsRemote`: it owns the Cap'n Proto connection and dials.
 
 use std::future::Future;
 use std::path::PathBuf;
